@@ -1,16 +1,23 @@
 import { Image } from 'expo-image';
 import * as SplashScreen from 'expo-splash-screen';
-import { useState } from 'react';
-import { Dimensions, StyleSheet, View } from 'react-native';
+import { useState , useEffect } from 'react';
+import { Dimensions, StyleSheet, View , Text} from 'react-native';
 import Animated, { Easing, Keyframe } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
 const INITIAL_SCALE_FACTOR = Dimensions.get('screen').height / 90;
-const DURATION = 600;
+const DURATION = 3000;
 
 export function AnimatedSplashOverlay() {
   const [animate, setAnimate] = useState(false);
   const [visible, setVisible] = useState(true);
+  useEffect(() => {
+  const temporizador = setTimeout(() => {
+    setAnimate(true);
+  }, 3000);
+
+  return () => clearTimeout(temporizador);
+}, []);
 
   if (!visible) return null;
 
@@ -33,8 +40,16 @@ export function AnimatedSplashOverlay() {
     },
   });
 
-  const image = <Image style={styles.image} source={require('@/assets/images/expo-logo.png')} />;
-
+const image = (
+  <View style={styles.contenidoSplash}>
+    <Image
+      style={styles.imagenSplash}
+      source={require('../../assets/images/colon-fondo-inicio.jpg')}
+      contentFit="cover"
+    />
+    <Text style={styles.tituloSplash}>Mi Ciudad</Text>
+  </View>
+)
   return animate ? (
     <Animated.View
       entering={splashKeyframe.duration(DURATION).withCallback((finished) => {
@@ -49,16 +64,13 @@ export function AnimatedSplashOverlay() {
   ) : (
     <View
       onLayout={() => {
-        SplashScreen.hideAsync().finally(() => {
-          setAnimate(true);
-        });
+        SplashScreen.hideAsync();
       }}
       style={styles.splashOverlay}>
       {image}
     </View>
   );
 }
-
 const keyframe = new Keyframe({
   0: {
     transform: [{ scale: INITIAL_SCALE_FACTOR }],
@@ -140,9 +152,30 @@ const styles = StyleSheet.create({
   },
   splashOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: '#208AEF',
+    backgroundColor:  '#176B87',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000,
   },
+  imagenSplash: {
+  width: '100%',
+  height: '100%',
+},
+
+contenidoSplash: {
+  width: '100%',
+  height: '100%',
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+
+tituloSplash: {
+  position: 'absolute',
+  fontSize: 38,
+  fontWeight: 'bold',
+  color: '#FFFFFF',
+  textShadowColor: '#000000',
+  textShadowRadius: 8,
+  textShadowOffset: { width: 2, height: 2 },
+},
 });

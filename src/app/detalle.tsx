@@ -1,4 +1,4 @@
-import { View, Text , Image , StyleSheet} from 'react-native';
+import { View, Text , Image , StyleSheet , ScrollView} from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { obtenerLugares } from '../servicios/lugares';
@@ -36,7 +36,13 @@ export default function DetalleScreen() {
   
  
   return (
-    <View style={styles.contenedor}>
+
+    
+<ScrollView
+  style={{ flex: 1 }}
+  contentContainerStyle={styles.contenedor}
+ 
+>
  {lugarDelServicio && (
   <Image
     source={obtenerImagenLugar(lugarDelServicio.id)}
@@ -85,7 +91,9 @@ export default function DetalleScreen() {
       : null
   }
 />
-    </View>
+
+
+    </ScrollView>
   );
 }
 
@@ -96,8 +104,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
 
-  contenedor: {
-  flex: 1,
+ contenedor: {
   padding: 20,
   gap: 12,
 },

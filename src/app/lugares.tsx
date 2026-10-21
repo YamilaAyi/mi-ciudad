@@ -1,35 +1,56 @@
 import { useState } from 'react';
 import { Text, StyleSheet, ScrollView, TextInput , View , Pressable} from 'react-native';
 import TarjetaLugar from '../components/TarjetaLugar';
+import { useEffect } from 'react';
+import { obtenerLugares } from '../servicios/lugares';
+import type { Lugar } from '../tipos/entities';
 
-const lugares = [
-  {
-    id: 1,
-    nombre: 'Molino Forclaz',
-    categoria: 'Museos y patrimonio',
-    imagen: require('../../assets/images/molino-forclaz.jpg'),
-  },
-  {
-    id: 2,
-    nombre: 'Termas de Colón',
-    categoria: 'Termas y bienestar',
-    imagen: require('../../assets/images/termas-colon.jpg'),
-  },
-  {
-    id: 3,
-    nombre: 'Parque Nacional El Palmar',
-    categoria: 'Naturaleza',
-    imagen: require('../../assets/images/el-palmar.jpg'),
-  },
-];
+
+function obtenerNombreCategoria(categoriaId: string): string {
+  switch (categoriaId) {
+    case 'historia':
+      return 'Museos y patrimonio';
+    case 'termas':
+      return 'Termas y bienestar';
+    case 'naturaleza':
+      return 'Naturaleza';
+    default:
+      return 'Otras';
+  }
+}
+
+function obtenerImagenLugar(id: string) {
+  switch (id) {
+    case '1':
+      return require('../../assets/images/molino-forclaz.jpg');
+    case '2':
+      return require('../../assets/images/termas-colon.jpg');
+    case '3':
+      return require('../../assets/images/el-palmar.jpg');
+    default:
+      return require('../../assets/images/molino-forclaz.jpg');
+  }
+}
 
 export default function LugaresScreen() {
       const [busqueda, setBusqueda] = useState('')
       const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('Todas');
-   const lugaresFiltrados = lugares.filter((lugar) =>
+      const [lugaresDelServicio, setLugaresDelServicio] = useState<Lugar[]>([]);
+      
+
+      useEffect(() => {
+  async function cargarLugares() {
+    const datos = await obtenerLugares();
+    console.log('Lugares del servicio:', datos);
+    setLugaresDelServicio(datos);
+  }
+
+  cargarLugares();
+}, []);
+   const lugaresFiltrados = lugaresDelServicio.filter((lugar) =>
   lugar.nombre.toLowerCase().includes(busqueda.toLowerCase()) &&
   (categoriaSeleccionada === 'Todas' ||
-    lugar.categoria === categoriaSeleccionada)
+   obtenerNombreCategoria(lugar.categoriaId) === categoriaSeleccionada)
 );
 
   return (
@@ -72,8 +93,8 @@ export default function LugaresScreen() {
     key={lugar.id}
     id={lugar.id}
     nombre={lugar.nombre}
-    categoria={lugar.categoria}
-    imagen={lugar.imagen}
+    categoria={obtenerNombreCategoria(lugar.categoriaId)}
+    imagen={obtenerImagenLugar(lugar.id)}
   />
 ))}
  

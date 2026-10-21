@@ -3,6 +3,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { obtenerLugares } from '../servicios/lugares';
 import type { Lugar } from '../tipos/entities';
+import { DatoLugar } from '../components/DatoLugar';
 
 
 
@@ -47,13 +48,6 @@ export default function DetalleScreen() {
   {lugarDelServicio?.nombre ?? 'Cargando lugar...'}
 </Text>
 
-<Text style={styles.descripcion}>
-  {lugarDelServicio?.descripcion ?? 'Descripción no disponible'}
-</Text>
-<Text style={styles.descripcion}>
-  📍 Dirección: {lugarDelServicio?.direccion ?? 'No disponible'}
-</Text>
-
  <Text style={styles.categoria}>
   {lugarDelServicio?.categoriaId === 'historia'
     ? 'Museos y patrimonio'
@@ -64,6 +58,33 @@ export default function DetalleScreen() {
     : 'Categoría desconocida'}
 </Text>
 
+<Text style={styles.descripcion}>
+  {lugarDelServicio?.descripcion ?? 'Descripción no disponible'}
+</Text>
+
+<DatoLugar
+  titulo="📍 Dirección"
+  valor={lugarDelServicio?.direccion ?? null}
+/>
+<DatoLugar
+  titulo="🕒 Horarios"
+  valor={lugarDelServicio?.horarios.length
+    ? 'Consultar horarios'
+    : null}
+ />
+<DatoLugar
+  titulo="📞 Teléfono"
+  valor={lugarDelServicio?.telefono ?? null}
+/>
+
+<DatoLugar
+  titulo="💰 Precio de entrada"
+  valor={
+    lugarDelServicio?.precioEntrada != null
+      ? `$${lugarDelServicio.precioEntrada}`
+      : null
+  }
+/>
     </View>
   );
 }

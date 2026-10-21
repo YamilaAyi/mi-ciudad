@@ -27,6 +27,19 @@ export default function TabLayout() {
     },
   }}
 />
+
+<Stack.Screen
+  name="detalle"
+  options={{
+    title: 'Detalle del lugar',
+    headerShown: true,
+    headerTitleStyle: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: '#176B87',
+    },
+  }}
+/>
 </Stack>
     </ThemeProvider>
   );

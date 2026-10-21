@@ -46,7 +46,10 @@ export default function HomeScreen() {
   </Pressable>
 
   {/* Agenda de eventos */}
-  <Pressable style={styles.botonExplorar}>
+  <Pressable
+    style={styles.botonExplorar}
+    onPress={() => router.push('/agenda')}
+  >
     <Ionicons
       name="calendar-outline"
       size={28}

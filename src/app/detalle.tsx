@@ -1,53 +1,99 @@
-import { View, Text , Image , StyleSheet} from 'react-native';
+import { View, Text , Image , StyleSheet , ScrollView} from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { obtenerLugares } from '../servicios/lugares';
+import type { Lugar } from '../tipos/entities';
+import { DatoLugar } from '../components/DatoLugar';
 
-const lugares = [
-  {
-    id: 1,
-    nombre: 'Molino Forclaz',
-    categoria: 'Museos y patrimonio',
-    descripcion: 'Monumento histórico de Colón, Entre Ríos.',
-    imagen: require('../../assets/images/molino-forclaz.jpg'),
-  },
-  {
-    id: 2,
-    nombre: 'Termas de Colón',
-    categoria: 'Termas',
-    descripcion: 'Complejo termal de Colón, ideal para descansar y disfrutar de sus piscinas.',
-    imagen: require('../../assets/images/termas-colon.jpg'),
-  },
-  {
-    id: 3,
-    nombre: 'Parque Nacional El Palmar',
-    categoria: 'Naturaleza',
-    descripcion: 'Parque nacional conocido por sus palmeras yatay y sus senderos naturales.',
-    imagen: require('../../assets/images/el-palmar.jpg'),
-  },
-];
+
+
+function obtenerImagenLugar(id: string) {
+  switch (id) {
+    case '1':
+      return require('../../assets/images/molino-forclaz.jpg');
+    case '2':
+      return require('../../assets/images/termas-colon.jpg');
+    case '3':
+      return require('../../assets/images/el-palmar.jpg');
+    default:
+      return require('../../assets/images/molino-forclaz.jpg');
+  }
+}
 
 export default function DetalleScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const lugar = lugares.find((lugar) => lugar.id === Number(id));
+  const [lugarDelServicio, setLugarDelServicio] = useState<Lugar | null>(null);
+
+  useEffect(() => {
+  async function cargarLugar() {
+    const datos = await obtenerLugares();
+    const lugarEncontrado = datos.find((lugar) => lugar.id === id);       
+    setLugarDelServicio(lugarEncontrado ?? null);
+  }
+
+  cargarLugar();
+}, [id]);
+  
  
   return (
-    <View style={styles.contenedor}>
-      {lugar?.imagen && (
+
+    
+<ScrollView
+  style={{ flex: 1 }}
+  contentContainerStyle={styles.contenedor}
+ 
+>
+ {lugarDelServicio && (
   <Image
-    source={lugar.imagen}
+    source={obtenerImagenLugar(lugarDelServicio.id)}
     style={styles.imagenLugar}
     resizeMode="cover"
   />
 )}
-     <Text style={styles.nombreLugar}>
-  {lugar?.nombre ?? 'Lugar desconocido'}
-</Text>   
-      <Text style={styles.categoria}>
-  {lugar?.categoria ?? 'Categoría desconocida'}
+<Text style={styles.nombreLugar}>
+  {lugarDelServicio?.nombre ?? 'Cargando lugar...'}
 </Text>
-  <Text style={styles.descripcion}>
-  {lugar?.descripcion ?? 'Descripción no disponible'}
+
+ <Text style={styles.categoria}>
+  {lugarDelServicio?.categoriaId === 'historia'
+    ? 'Museos y patrimonio'
+    : lugarDelServicio?.categoriaId === 'termas'
+    ? 'Termas y bienestar'
+    : lugarDelServicio?.categoriaId === 'naturaleza'
+    ? 'Naturaleza'
+    : 'Categoría desconocida'}
 </Text>
-    </View>
+
+<Text style={styles.descripcion}>
+  {lugarDelServicio?.descripcion ?? 'Descripción no disponible'}
+</Text>
+
+<DatoLugar
+  titulo="📍 Dirección"
+  valor={lugarDelServicio?.direccion ?? null}
+/>
+<DatoLugar
+  titulo="🕒 Horarios"
+  valor={lugarDelServicio?.horarios.length
+    ? 'Consultar horarios'
+    : null}
+ />
+<DatoLugar
+  titulo="📞 Teléfono"
+  valor={lugarDelServicio?.telefono ?? null}
+/>
+
+<DatoLugar
+  titulo="💰 Precio de entrada"
+  valor={
+    lugarDelServicio?.precioEntrada != null
+      ? `$${lugarDelServicio.precioEntrada}`
+      : null
+  }
+/>
+
+
+    </ScrollView>
   );
 }
 
@@ -58,8 +104,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
 
-  contenedor: {
-  flex: 1,
+ contenedor: {
   padding: 20,
   gap: 12,
 },

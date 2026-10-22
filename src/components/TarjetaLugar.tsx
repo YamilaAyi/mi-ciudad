@@ -8,7 +8,7 @@ export default function TarjetaLugar({
   categoria,
   imagen,
 }: {
-  id: number;
+  id: string;
   nombre: string;
   categoria: string;
   imagen: ImageSourcePropType;

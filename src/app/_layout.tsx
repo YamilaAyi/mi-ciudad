@@ -14,6 +14,8 @@ export default function TabLayout() {
       <AnimatedSplashOverlay />
 <Stack>
   <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+  <Stack.Screen name="login" options={{ title: 'Iniciar sesión' }} />
+  <Stack.Screen name="registro" options={{ title: 'Crear cuenta' }} />
 
  <Stack.Screen
   name="lugares"

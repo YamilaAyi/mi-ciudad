@@ -1,9 +1,7 @@
+import { URL_API } from '../config/api';
 import { borrarTokenSesion, obtenerTokenSesion } from './almacen-sesion';
 
-const API_BASE_URL = (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000').replace(
-  /\/+$/,
-  ''
-);
+const API_BASE_URL = URL_API.replace(/\/+$/, '');
 
 export class ApiError extends Error {
   constructor(

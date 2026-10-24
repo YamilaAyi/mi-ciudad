@@ -16,6 +16,18 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npx expo start
    ```
 
+## Configuración de la API
+
+La app necesita saber dónde está levantada la API del backend. Definí estas variables en un archivo `.env` local (no lo subas al repositorio):
+
+```env
+EXPO_PUBLIC_API_URL=http://192.168.1.50:3000
+```
+
+En Expo, `localhost` desde el celular apunta al propio teléfono, no a tu computadora. Si lo estás probando desde un celular o emulador, usá la IP de tu PC en la red local.
+
+La app no guarda credenciales de prueba ni inicia sesión automáticamente. Ingresá con una cuenta existente en la API o registrá una desde la aplicación.
+
 In the output, you'll find options to open the app in a
 
 - [development build](https://docs.expo.dev/develop/development-builds/introduction/)

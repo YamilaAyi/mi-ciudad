@@ -5,6 +5,7 @@ import {
   guardarTokenSesion,
   obtenerTokenSesion,
 } from './almacen-sesion';
+import { borrarCache, guardarCache } from './baseLocal';
 
 interface RespuestaUno<T> {
   datos: T;
@@ -27,6 +28,7 @@ export async function ingresar(email: string, contrasena: string): Promise<Usuar
   }
 
   await guardarTokenSesion(respuesta.datos.token);
+  await guardarCache('usuarioId', respuesta.datos.usuario.id);
   return respuesta.datos.usuario;
 }
 
@@ -45,6 +47,7 @@ export async function registrar(
   }
 
   await guardarTokenSesion(respuesta.datos.token);
+  await guardarCache('usuarioId', respuesta.datos.usuario.id);
   return respuesta.datos.usuario;
 }
 
@@ -68,6 +71,7 @@ export async function obtenerUsuarioActual(): Promise<Usuario | null> {
   }
 }
 
-export function cerrarSesion(): Promise<void> {
-  return borrarTokenSesion();
+export async function cerrarSesion(): Promise<void> {
+  await borrarTokenSesion();
+  await borrarCache('usuarioId');
 }

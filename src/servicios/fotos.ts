@@ -1,6 +1,7 @@
 import { Directory, File, Paths } from 'expo-file-system';
 import { URL_API } from '../config/api';
-import { ErrorApi, fetchConTiempoLimite, obtenerToken } from './cliente';
+import { ErrorApi, fetchConTiempoLimite } from './cliente';
+import { borrarTokenSesion, obtenerTokenSesion } from './almacen-sesion';
 
 // Copia la foto a una carpeta permanente de la app y devuelve su nueva dirección.
 // Si algo falla, usa la foto original en vez de perderla.
@@ -28,7 +29,7 @@ export async function subirFoto(uriLocal: string): Promise<string> {
     type: 'image/jpeg',
   } as unknown as Blob);
 
-  const token = obtenerToken();
+  const token = await obtenerTokenSesion();
   const respuesta = await fetchConTiempoLimite(
     `${URL_API}/archivos`,
     {
@@ -41,8 +42,12 @@ export async function subirFoto(uriLocal: string): Promise<string> {
 
   const contenido = await respuesta.json().catch(() => null);
   if (!respuesta.ok) {
+    const codigo = contenido?.error?.codigo ?? 'ERROR_DESCONOCIDO';
+    if (respuesta.status === 401 && codigo === 'NO_AUTENTICADO') {
+      await borrarTokenSesion();
+    }
     throw new ErrorApi(
-      contenido?.error?.codigo ?? 'ERROR_DESCONOCIDO',
+      codigo,
       contenido?.error?.mensaje ?? 'No pudimos subir la foto.',
       respuesta.status
     );

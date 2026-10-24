@@ -1,5 +1,5 @@
-import * as SecureStore from 'expo-secure-store';
 import { URL_API } from '../config/api';
+import { borrarTokenSesion, obtenerTokenSesion } from './almacen-sesion';
 
 // Error que lanza el cliente. "codigo" es el de la API (por ejemplo "NO_AUTENTICADO")
 // o "SIN_CONEXION" si el teléfono no pudo llegar al servidor.
@@ -14,45 +14,7 @@ export class ErrorApi extends Error {
   }
 }
 
-const CLAVE_TOKEN = 'token-sesion';
 const TIEMPO_LIMITE_MS = 8000;
-
-let token: string | null = null;
-let alVencerSesion: (() => void) | null = null;
-
-// Para que sesion.ts se entere cuando la API dice que la sesión venció.
-export function registrarAlVencerSesion(funcion: () => void) {
-  alVencerSesion = funcion;
-}
-
-// Guarda el token en memoria y, cifrado, en el teléfono. Con null, lo borra.
-export async function guardarToken(nuevo: string | null): Promise<void> {
-  token = nuevo;
-  try {
-    if (nuevo) {
-      await SecureStore.setItemAsync(CLAVE_TOKEN, nuevo);
-    } else {
-      await SecureStore.deleteItemAsync(CLAVE_TOKEN);
-    }
-  } catch (e) {
-    console.log('No se pudo guardar el token en el teléfono:', e);
-  }
-}
-
-// Lee el token guardado la última vez (por ejemplo, al abrir la app de nuevo).
-export async function cargarTokenGuardado(): Promise<string | null> {
-  if (token) return token;
-  try {
-    token = await SecureStore.getItemAsync(CLAVE_TOKEN);
-  } catch {
-    token = null;
-  }
-  return token;
-}
-
-export function obtenerToken(): string | null {
-  return token;
-}
 
 // Hace un fetch que se corta si el servidor no responde a tiempo (señal débil).
 // Si se corta, lanza un ErrorApi SIN_CONEXION.
@@ -65,10 +27,11 @@ export async function fetchConTiempoLimite(
   const temporizador = setTimeout(() => controlador.abort(), milisegundos);
   try {
     return await fetch(url, { ...opciones, signal: controlador.signal });
-   } catch (e) {
-    // No hubo respuesta: sin señal, tiempo agotado, API apagada o IP incorrecta.
-    console.log('Fallo de red al llamar a', url, '->', e);
+  } catch (error) {
+    console.log('Fallo de red al llamar a', url, '->', error);
     throw new ErrorApi('SIN_CONEXION', 'No pudimos conectarnos. Revisá tu conexión.', 0);
+  } finally {
+    clearTimeout(temporizador);
   }
 }
 
@@ -78,6 +41,8 @@ export async function pedir<T>(
 ): Promise<T> {
   const headers: Record<string, string> = {};
   if (opciones.cuerpo !== undefined) headers['Content-Type'] = 'application/json';
+
+  const token = await obtenerTokenSesion();
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
   const respuesta = await fetchConTiempoLimite(`${URL_API}${ruta}`, {
@@ -86,30 +51,36 @@ export async function pedir<T>(
     body: opciones.cuerpo !== undefined ? JSON.stringify(opciones.cuerpo) : undefined,
   });
 
-  // 204 = respuesta sin cuerpo (por ejemplo, al borrar algo)
   if (respuesta.status === 204) return null as T;
 
-  let contenido: any = null;
+  let contenido: unknown = null;
   try {
     contenido = await respuesta.json();
   } catch {
-    // la respuesta no era JSON
+    // La respuesta no era JSON.
   }
 
   if (!respuesta.ok) {
-    const error = contenido?.error;
+    const payloadError =
+      typeof contenido === 'object' && contenido !== null && 'error' in contenido
+        ? contenido.error
+        : null;
+    const error =
+      typeof payloadError === 'object' && payloadError !== null ? payloadError : null;
+    const codigo =
+      error && 'codigo' in error && typeof error.codigo === 'string'
+        ? error.codigo
+        : 'ERROR_DESCONOCIDO';
+    const mensaje =
+      error && 'mensaje' in error && typeof error.mensaje === 'string'
+        ? error.mensaje
+        : 'Algo salió mal. Probá de nuevo.';
 
-    // La sesión venció (el token dura 30 días): se borra y se avisa.
-    if (respuesta.status === 401 && error?.codigo === 'NO_AUTENTICADO' && token) {
-      await guardarToken(null);
-      alVencerSesion?.();
+    if (respuesta.status === 401 && codigo === 'NO_AUTENTICADO' && token) {
+      await borrarTokenSesion();
     }
 
-    throw new ErrorApi(
-      error?.codigo ?? 'ERROR_DESCONOCIDO',
-      error?.mensaje ?? 'Algo salió mal. Probá de nuevo.',
-      respuesta.status
-    );
+    throw new ErrorApi(codigo, mensaje, respuesta.status);
   }
 
   return contenido as T;

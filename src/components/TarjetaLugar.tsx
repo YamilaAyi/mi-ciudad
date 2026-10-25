@@ -11,11 +11,20 @@ export default function TarjetaLugar({
   id: string;
   nombre: string;
   categoria: string;
-  imagen: ImageSourcePropType;
+ imagen: ImageSourcePropType | string;
 }) {
   return (
     <View style ={styles.tarjeta}>  
-  <Image source={imagen} style={styles.imagenLugar} /> 
+{imagen ? (
+  <Image
+    source={typeof imagen === 'string' ? { uri: imagen } : imagen}
+    style={styles.imagenLugar}
+  />
+) : (
+  <View style={[styles.imagenLugar, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#E8EEF1' }]}>
+    <Text>📷 Imagen no disponible</Text>
+  </View>
+)}
  <Text style={styles.nombreLugar}>{nombre}</Text>
   <Text style={styles.categoria}>{categoria}</Text>
 

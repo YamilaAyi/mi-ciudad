@@ -7,8 +7,8 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  View,
-  type ImageSourcePropType,
+  View, 
+  
 } from 'react-native';
 import { obtenerUsuarioActual } from '../servicios/auth';
 import { alternarFavorito, obtenerIdsFavoritos } from '../servicios/favoritos';
@@ -18,19 +18,6 @@ import { DatoLugar } from '../components/DatoLugar';
 
 
 
-function obtenerImagenLugar(id: string): ImageSourcePropType {
-  switch (id) {
-    case '1':
-      return require('../../assets/images/molino-forclaz.jpg');
-    case '2':
-      return require('../../assets/images/termas-colon.jpg');
-    case '3':
-      return require('../../assets/images/el-palmar.jpg');
-    default:
-      return require('../../assets/images/molino-forclaz.jpg');
-  }
-}
-
 function obtenerIdApiLugar(id: string): string {
   const idsApi: Record<string, string> = {
     '1': 'lug-004',
@@ -38,6 +25,28 @@ function obtenerIdApiLugar(id: string): string {
     '3': 'lug-006',
   };
   return idsApi[id] ?? id;
+}
+
+function formatearHorarios(horarios: Lugar['horarios']): string | null {
+  if (horarios.length === 0) {
+    return null;
+  }
+
+  const dias = [
+    'Domingo',
+    'Lunes',
+    'Martes',
+    'Miércoles',
+    'Jueves',
+    'Viernes',
+    'Sábado',
+  ];
+
+  return horarios
+    .map((horario) =>
+      `${dias[horario.dia]}: ${horario.abre} a ${horario.cierra}`
+    )
+    .join('\n');
 }
 
 export default function DetalleScreen() {
@@ -78,14 +87,12 @@ export default function DetalleScreen() {
             setEsFavorito(false);
           }
         } catch (favoriteError) {
-          if (activo) {
-            setErrorFavorito(
-              favoriteError instanceof Error
-                ? favoriteError.message
-                : 'No se pudo consultar el estado del favorito.'
-            );
-          }
-        } finally {
+  if (activo) {
+    setErrorFavorito(
+      'No se pudieron consultar los favoritos. Comprobá tu conexión.'
+    );
+  }
+} finally {
           if (activo) setCargandoFavorito(false);
         }
       }
@@ -128,12 +135,18 @@ export default function DetalleScreen() {
   contentContainerStyle={styles.contenedor}
  
 >
- {lugarDelServicio && (
-  <Image
-    source={obtenerImagenLugar(lugarDelServicio.id)}
-    style={styles.imagenLugar}
-    resizeMode="cover"
-  />
+{lugarDelServicio && (
+  lugarDelServicio.imagenes?.[0] ? (
+    <Image
+      source={{ uri: lugarDelServicio.imagenes[0] }}
+      style={styles.imagenLugar}
+      resizeMode="cover"
+    />
+  ) : (
+    <View style={styles.imagenLugar}>
+      <Text>📷 Imagen no disponible</Text>
+    </View>
+  )
 )}
  <Text style={styles.nombreLugar}>
    {lugarDelServicio?.nombre ?? 'Cargando lugar...'}
@@ -167,13 +180,23 @@ export default function DetalleScreen() {
    </View>
  )}
 
- <Text style={styles.categoria}>
-  {lugarDelServicio?.categoriaId === 'historia'
-     ? 'Museos y patrimonio'
-     : lugarDelServicio?.categoriaId === 'termas'
-     ? 'Termas y bienestar'
-     : lugarDelServicio?.categoriaId === 'naturaleza'
+<Text style={styles.categoria}>
+  {lugarDelServicio?.categoriaId === 'cat-playas'
+    ? 'Playas'
+    : lugarDelServicio?.categoriaId === 'cat-termas'
+    ? 'Termas'
+    : lugarDelServicio?.categoriaId === 'cat-museos'
+    ? 'Museos y patrimonio'
+    : lugarDelServicio?.categoriaId === 'cat-gastronomia'
+    ? 'Gastronomía'
+    : lugarDelServicio?.categoriaId === 'cat-artesanias'
+    ? 'Artesanías'
+    : lugarDelServicio?.categoriaId === 'cat-naturaleza'
     ? 'Naturaleza'
+    : lugarDelServicio?.categoriaId === 'cat-alojamiento'
+    ? 'Alojamiento'
+    : lugarDelServicio?.categoriaId === 'cat-bodegas'
+    ? 'Bodegas'
     : 'Categoría desconocida'}
 </Text>
 
@@ -182,27 +205,53 @@ export default function DetalleScreen() {
 </Text>
 
 <DatoLugar
-  titulo="📍 Dirección"
+  titulo="Dirección"
+  icono="location-outline"
   valor={lugarDelServicio?.direccion ?? null}
 />
 <DatoLugar
-  titulo="🕒 Horarios"
-  valor={lugarDelServicio?.horarios.length
-    ? 'Consultar horarios'
-    : null}
- />
+  titulo="Horarios"
+  icono="time-outline"
+  valor={
+    lugarDelServicio
+      ? formatearHorarios(lugarDelServicio.horarios)
+      : null
+  }
+/>
 <DatoLugar
-  titulo="📞 Teléfono"
+  titulo="Teléfono"
+  icono="call-outline"
   valor={lugarDelServicio?.telefono ?? null}
 />
 
 <DatoLugar
-  titulo="💰 Precio de entrada"
+  titulo="Precio de entrada"
+  icono="cash-outline"
   valor={
-    lugarDelServicio?.precioEntrada != null
-      ? `$${lugarDelServicio.precioEntrada}`
+    lugarDelServicio?.precioEntrada === 0
+      ? 'Entrada gratuita'
+      : lugarDelServicio?.precioEntrada != null
+        ? `$${lugarDelServicio.precioEntrada}`
+        : null
+  }
+/>
+
+<DatoLugar
+  titulo="Accesibilidad"
+  icono="accessibility-outline"
+  valor={
+    lugarDelServicio
+      ? lugarDelServicio.accesible
+        ? 'Accesible para personas en silla de ruedas'
+        : 'No figura como accesible para silla de ruedas'
       : null
   }
+/>
+
+<DatoLugar
+  titulo="Sitio web"
+  icono="globe-outline"
+  valor={lugarDelServicio?.sitioWeb ?? null}
 />
 
 

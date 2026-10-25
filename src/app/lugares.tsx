@@ -1,52 +1,67 @@
-import { useState } from 'react';
+import { useState , useEffect } from 'react';
 import { Text, StyleSheet, ScrollView, TextInput , View , Pressable} from 'react-native';
 import TarjetaLugar from '../components/TarjetaLugar';
-import { useEffect } from 'react';
-import { obtenerLugares } from '../servicios/lugares';
+import { obtenerLugares ,  usandoCacheLugares } from '../servicios/lugares';
 import type { Lugar } from '../tipos/entities';
+import { Ionicons } from '@expo/vector-icons';
 
 
 function obtenerNombreCategoria(categoriaId: string): string {
   switch (categoriaId) {
-    case 'historia':
+    case 'cat-playas':
+      return 'Playas';
+    case 'cat-termas':
+      return 'Termas';
+    case 'cat-museos':
       return 'Museos y patrimonio';
-    case 'termas':
-      return 'Termas y bienestar';
-    case 'naturaleza':
+    case 'cat-gastronomia':
+      return 'Gastronomía';
+    case 'cat-artesanias':
+      return 'Artesanías';
+    case 'cat-naturaleza':
       return 'Naturaleza';
+    case 'cat-alojamiento':
+      return 'Alojamiento';
+    case 'cat-bodegas':
+      return 'Bodegas';
     default:
       return 'Otras';
   }
 }
 
-function obtenerImagenLugar(id: string) {
-  switch (id) {
-    case '1':
-      return require('../../assets/images/molino-forclaz.jpg');
-    case '2':
-      return require('../../assets/images/termas-colon.jpg');
-    case '3':
-      return require('../../assets/images/el-palmar.jpg');
-    default:
-      return require('../../assets/images/molino-forclaz.jpg');
-  }
-}
+
 
 export default function LugaresScreen() {
       const [busqueda, setBusqueda] = useState('')
       const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('Todas');
       const [lugaresDelServicio, setLugaresDelServicio] = useState<Lugar[]>([]);
+      const [cargando, setCargando] = useState(true);
+const [error, setError] = useState<string | null>(null);
+const [mostrandoCache, setMostrandoCache] = useState(false);
       
 
-      useEffect(() => {
-  async function cargarLugares() {
-    const datos = await obtenerLugares();
-    console.log('Lugares del servicio:', datos);
-    setLugaresDelServicio(datos);
-  }
+async function cargarLugares() {
+  try {
+    setCargando(true);
+    setError(null);
 
+    const datos = await obtenerLugares();
+    setLugaresDelServicio(datos);
+    setMostrandoCache(usandoCacheLugares);
+
+  } catch (error) {
+    setLugaresDelServicio([]);
+    setError('No se pudieron cargar los lugares turísticos.');
+
+  } finally {
+    setCargando(false);
+  }
+}
+
+useEffect(() => {
   cargarLugares();
 }, []);
+
    const lugaresFiltrados = lugaresDelServicio.filter((lugar) =>
   lugar.nombre.toLowerCase().includes(busqueda.toLowerCase()) &&
   (categoriaSeleccionada === 'Todas' ||
@@ -54,8 +69,51 @@ export default function LugaresScreen() {
 );
 
   return (
-    <ScrollView style={styles.container}>
-  
+    <ScrollView
+  style={styles.container}
+  contentContainerStyle={{ paddingBottom: 40 }}
+>
+{mostrandoCache && !cargando && (
+  <View
+    style={{
+      backgroundColor: '#FFF8E1',
+      padding: 10,
+      borderRadius: 10,
+      marginTop: 5,
+      marginBottom: 5,
+      borderWidth: 1,
+      borderColor: '#F5E6B3',
+    }}
+  >
+  <Ionicons
+    name="server-outline"
+    size={22}
+    color="#664D03"
+  />
+
+  <Text style={{ color: '#664D03', fontSize: 14, flex: 1 }}>
+    Estás viendo información guardada. Algunos datos podrían no estar actualizados.
+  </Text>
+</View>
+)}
+      {cargando && (
+  <Text style={{ textAlign: 'center', marginTop: 20 }}>
+    Cargando lugares turísticos...
+  </Text>
+)}
+{error && (
+  <View style={{ alignItems: 'center', marginTop: 20 }}>
+    <Text style={{ color: 'red', marginBottom: 10 }}>
+      {error}
+    </Text>
+
+    <Pressable onPress={cargarLugares}>
+      <Text style={{ color: 'blue', fontWeight: 'bold' }}>
+        Reintentar
+      </Text>
+    </Pressable>
+  </View>
+)}
 
 <TextInput
   style={styles.buscador}
@@ -64,7 +122,17 @@ export default function LugaresScreen() {
   onChangeText={setBusqueda}
 />
 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 15 }}>
-  {['Todas', 'Termas y bienestar', 'Naturaleza', 'Museos y patrimonio'].map((categoria) => (
+  {[
+  'Todas',
+  'Playas',
+  'Termas',
+  'Museos y patrimonio',
+  'Gastronomía',
+  'Artesanías',
+  'Naturaleza',
+  'Alojamiento',
+  'Bodegas',
+].map((categoria) => (
     <Pressable
       key={categoria}
       onPress={() => setCategoriaSeleccionada(categoria)}
@@ -89,13 +157,13 @@ export default function LugaresScreen() {
   </Text>
 )}
 {lugaresFiltrados.map((lugar) => (
-  <TarjetaLugar
-    key={lugar.id}
-    id={lugar.id}
-    nombre={lugar.nombre}
-    categoria={obtenerNombreCategoria(lugar.categoriaId)}
-    imagen={obtenerImagenLugar(lugar.id)}
-  />
+<TarjetaLugar
+  key={lugar.id}
+  id={lugar.id}
+  nombre={lugar.nombre}
+  categoria={obtenerNombreCategoria(lugar.categoriaId)}
+  imagen={lugar.imagenes?.[0]}
+/>
 ))}
  
 </ScrollView>

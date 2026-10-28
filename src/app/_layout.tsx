@@ -14,11 +14,26 @@ export default function TabLayout() {
       <AnimatedSplashOverlay />
 <Stack>
   <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+  <Stack.Screen name="login" options={{ title: 'Iniciar sesión' }} />
+  <Stack.Screen name="registro" options={{ title: 'Crear cuenta' }} />
 
  <Stack.Screen
   name="lugares"
   options={{
     title: 'Lugares turísticos',
+    headerShown: true,
+    headerTitleStyle: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: '#176B87',
+    },
+  }}
+/>
+
+<Stack.Screen
+  name="detalle"
+  options={{
+    title: 'Detalle del lugar',
     headerShown: true,
     headerTitleStyle: {
       fontSize: 24,

@@ -49,7 +49,7 @@ async function cargarLugares() {
     setLugaresDelServicio(datos);
     setMostrandoCache(usandoCacheLugares);
 
-  } catch (error) {
+  } catch  {
     setLugaresDelServicio([]);
     setError('No se pudieron cargar los lugares turísticos.');
 

@@ -2,6 +2,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import FotoVisita from '../../components/FotoVisita';
+import { ErrorApi } from '../../servicios/cliente';
 import { obtenerLugares } from '../../servicios/lugares';
 import { obtenerVisitas } from '../../servicios/visitas';
 import type { Lugar, Visita } from '../../tipos/entities';
@@ -20,16 +21,23 @@ export default function RecorridoScreen() {
   const [lugares, setLugares] = useState<Lugar[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sinSesion, setSinSesion] = useState(false);
   const [lugaresFallaron, setLugaresFallaron] = useState(false);
 
   const cargar = useCallback(async (conIndicador: boolean) => {
     if (conIndicador) setCargando(true);
     setError(null);
+    setSinSesion(false);
     setLugaresFallaron(false);
     try {
       setVisitas(await obtenerVisitas());
     } catch (e) {
-      setError(mensajeDeError(e));
+      setVisitas([]);
+      if (e instanceof ErrorApi && e.codigo === 'NO_AUTENTICADO') {
+        setSinSesion(true);
+      } else {
+        setError(mensajeDeError(e));
+      }
     }
     try {
       setLugares(await obtenerLugares());
@@ -52,9 +60,9 @@ export default function RecorridoScreen() {
     (a, b) => new Date(b.fechaHora).getTime() - new Date(a.fechaHora).getTime()
   );
 
-  // Lugares activos que todavía no tienen ninguna visita
+  // Lugares activos que todavía no tienen ninguna visita (sin sesión no se puede saber)
   const idsVisitados = new Set(visitas.map((v) => v.lugarId));
-  const pendientes = lugares.filter((l) => l.activo && !idsVisitados.has(l.id));
+  const pendientes = sinSesion ? [] : lugares.filter((l) => l.activo && !idsVisitados.has(l.id));
 
   function nombreDelLugar(lugarId: string): string {
     return lugares.find((l) => l.id === lugarId)?.nombre ?? 'Lugar no disponible';
@@ -101,6 +109,22 @@ export default function RecorridoScreen() {
       <ScrollView contentContainerStyle={styles.lista}>
         {cargando && <Text style={styles.vacio}>Cargando...</Text>}
 
+        {!cargando && sinSesion && (
+          <View style={styles.cuadroSesion} accessibilityRole="alert">
+            <Text style={styles.textoSesion}>
+              Ingresá a tu cuenta para ver y guardar tu recorrido. Podés seguir mirando el mapa y los
+              lugares sin cuenta.
+            </Text>
+            <Pressable
+              style={styles.botonIngresar}
+              onPress={() => router.push('/login')}
+              accessibilityRole="button"
+            >
+              <Text style={styles.textoBotonIngresar}>Ingresar</Text>
+            </Pressable>
+          </View>
+        )}
+
         {!cargando && error && (
           <View style={styles.cuadroError} accessibilityRole="alert">
             <Text style={styles.textoError}>{error}</Text>
@@ -114,7 +138,7 @@ export default function RecorridoScreen() {
           </View>
         )}
 
-        {!cargando && !error && pestania === 'visitados' && visitasOrdenadas.length === 0 && (
+        {!cargando && !error && !sinSesion && pestania === 'visitados' && visitasOrdenadas.length === 0 && (
           <Text style={styles.vacio}>Todavía no registraste ninguna visita.</Text>
         )}
 
@@ -145,7 +169,7 @@ export default function RecorridoScreen() {
             </Pressable>
           ))}
 
-        {!cargando && pestania === 'pendientes' && lugaresFallaron && (
+        {!cargando && !sinSesion && pestania === 'pendientes' && lugaresFallaron && (
           <View style={styles.cuadroError} accessibilityRole="alert">
             <Text style={styles.textoError}>
               No pudimos cargar los lugares. Abrí la app una vez con conexión para tenerlos guardados.
@@ -160,7 +184,7 @@ export default function RecorridoScreen() {
           </View>
         )}
 
-        {!cargando && pestania === 'pendientes' && !lugaresFallaron && pendientes.length === 0 && (
+        {!cargando && !sinSesion && pestania === 'pendientes' && !lugaresFallaron && pendientes.length === 0 && (
           <Text style={styles.vacio}>¡Visitaste todos los lugares!</Text>
         )}
 
@@ -317,6 +341,32 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+  cuadroSesion: {
+    backgroundColor: '#E8F4F8',
+    borderWidth: 1,
+    borderColor: '#B7D9E4',
+    borderRadius: 12,
+    padding: 16,
+    gap: 12,
+  },
+  textoSesion: {
+    fontSize: 16,
+    color: '#0F4C5C',
+    lineHeight: 22,
+  },
+  botonIngresar: {
+    backgroundColor: '#176B87',
+    minHeight: 52,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  textoBotonIngresar: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   cuadroError: {
     backgroundColor: '#FDECEA',

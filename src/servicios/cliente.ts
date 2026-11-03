@@ -1,8 +1,9 @@
+import axios from 'axios';
 import { URL_API } from '../config/api';
 import { borrarTokenSesion, obtenerTokenSesion } from './almacen-sesion';
 
-// Error que lanza el cliente. "codigo" es el de la API (por ejemplo "NO_AUTENTICADO")
-// o "SIN_CONEXION" si el teléfono no pudo llegar al servidor.
+// "codigo" es el de la API (por ejemplo "NO_AUTENTICADO") o "SIN_CONEXION"
+// si el teléfono no pudo llegar al servidor.
 export class ErrorApi extends Error {
   codigo: string;
   estado: number;
@@ -14,74 +15,57 @@ export class ErrorApi extends Error {
   }
 }
 
-const TIEMPO_LIMITE_MS = 8000;
+// Un único cliente para toda la app.
+export const clienteHttp = axios.create({
+  baseURL: URL_API,
+  timeout: 8000, // si no responde en 8 segundos (señal débil), se corta
+});
 
-// Hace un fetch que se corta si el servidor no responde a tiempo (señal débil).
-// Si se corta, lanza un ErrorApi SIN_CONEXION.
-export async function fetchConTiempoLimite(
-  url: string,
-  opciones: RequestInit,
-  milisegundos: number = TIEMPO_LIMITE_MS
-): Promise<Response> {
-  const controlador = new AbortController();
-  const temporizador = setTimeout(() => controlador.abort(), milisegundos);
-  try {
-    return await fetch(url, { ...opciones, signal: controlador.signal });
-  } catch (error) {
-    console.log('Fallo de red al llamar a', url, '->', error);
-    throw new ErrorApi('SIN_CONEXION', 'No pudimos conectarnos. Revisá tu conexión.', 0);
-  } finally {
-    clearTimeout(temporizador);
+// Antes de cada pedido: agrega el token de sesión, si hay.
+clienteHttp.interceptors.request.use(async (config) => {
+  const token = await obtenerTokenSesion();
+  if (token) config.headers.set('Authorization', `Bearer ${token}`);
+  return config;
+});
+
+function aErrorApi(error: unknown): ErrorApi {
+  if (axios.isAxiosError(error)) {
+    // Sin respuesta: sin señal, tiempo agotado, API apagada o IP incorrecta.
+    if (!error.response) {
+      console.log('Fallo de red:', error.config?.url, '->', error.message);
+      return new ErrorApi('SIN_CONEXION', 'No pudimos conectarnos. Revisá tu conexión.', 0);
+    }
+    const cuerpo = error.response.data?.error;
+    return new ErrorApi(
+      cuerpo?.codigo ?? 'ERROR_DESCONOCIDO',
+      cuerpo?.mensaje ?? 'Algo salió mal. Probá de nuevo.',
+      error.response.status
+    );
   }
+  return new ErrorApi('ERROR_DESCONOCIDO', 'Algo salió mal. Probá de nuevo.', 0);
 }
+
+// Después de cada pedido: traduce los errores y, si la sesión venció, la borra.
+clienteHttp.interceptors.response.use(
+  (respuesta) => respuesta,
+  async (error) => {
+    const errorApi = aErrorApi(error);
+    if (errorApi.estado === 401 && errorApi.codigo === 'NO_AUTENTICADO') {
+      await borrarTokenSesion();
+    }
+    return Promise.reject(errorApi);
+  }
+);
 
 export async function pedir<T>(
   ruta: string,
   opciones: { metodo?: string; cuerpo?: unknown } = {}
 ): Promise<T> {
-  const headers: Record<string, string> = {};
-  if (opciones.cuerpo !== undefined) headers['Content-Type'] = 'application/json';
-
-  const token = await obtenerTokenSesion();
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-
-  const respuesta = await fetchConTiempoLimite(`${URL_API}${ruta}`, {
+  const respuesta = await clienteHttp.request<T>({
+    url: ruta,
     method: opciones.metodo ?? 'GET',
-    headers,
-    body: opciones.cuerpo !== undefined ? JSON.stringify(opciones.cuerpo) : undefined,
+    data: opciones.cuerpo,
   });
-
   if (respuesta.status === 204) return null as T;
-
-  let contenido: unknown = null;
-  try {
-    contenido = await respuesta.json();
-  } catch {
-    // La respuesta no era JSON.
-  }
-
-  if (!respuesta.ok) {
-    const payloadError =
-      typeof contenido === 'object' && contenido !== null && 'error' in contenido
-        ? contenido.error
-        : null;
-    const error =
-      typeof payloadError === 'object' && payloadError !== null ? payloadError : null;
-    const codigo =
-      error && 'codigo' in error && typeof error.codigo === 'string'
-        ? error.codigo
-        : 'ERROR_DESCONOCIDO';
-    const mensaje =
-      error && 'mensaje' in error && typeof error.mensaje === 'string'
-        ? error.mensaje
-        : 'Algo salió mal. Probá de nuevo.';
-
-    if (respuesta.status === 401 && codigo === 'NO_AUTENTICADO' && token) {
-      await borrarTokenSesion();
-    }
-
-    throw new ErrorApi(codigo, mensaje, respuesta.status);
-  }
-
-  return contenido as T;
+  return respuesta.data;
 }

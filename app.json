@@ -35,7 +35,13 @@
       ],
       "@react-native-vector-icons/ionicons",
       "expo-secure-store",
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Permitir que Mi Ciudad use Face ID para iniciar sesión."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

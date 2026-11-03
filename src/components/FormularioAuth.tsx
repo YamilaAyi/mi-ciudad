@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -11,7 +11,13 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { ingresar, registrar } from '../servicios/auth';
+import { Ionicons } from '@expo/vector-icons';
+import {
+  ingresar,
+  ingresarConBiometria,
+  obtenerEstadoBiometrico,
+  registrar,
+} from '../servicios/auth';
 
 type ModoAuth = 'ingreso' | 'registro';
 
@@ -23,6 +29,60 @@ export function FormularioAuth({ modo }: { modo: ModoAuth }) {
   const [contrasena, setContrasena] = useState('');
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sesionGuardada, setSesionGuardada] = useState(false);
+  const [biometriaDisponible, setBiometriaDisponible] = useState(false);
+  const [comprobandoSesion, setComprobandoSesion] = useState(!esRegistro);
+  const [usarContrasena, setUsarContrasena] = useState(false);
+  const promptBiometricoIniciado = useRef(false);
+
+  useEffect(() => {
+    if (esRegistro) return;
+    let activo = true;
+    async function comprobarSesion() {
+      try {
+        const estado = await obtenerEstadoBiometrico();
+        if (!activo) return;
+        setSesionGuardada(estado.sesionGuardada);
+        setBiometriaDisponible(estado.disponible);
+
+        if (estado.disponible && !promptBiometricoIniciado.current) {
+          promptBiometricoIniciado.current = true;
+          setCargando(true);
+          setError(null);
+          try {
+            await ingresarConBiometria();
+            if (activo) router.replace('/(tabs)/perfil');
+          } catch (biometricError) {
+            if (activo) {
+              setError(
+                biometricError instanceof Error
+                  ? biometricError.message
+                  : 'No se pudo completar el ingreso biométrico.'
+              );
+            }
+          } finally {
+            if (activo) setCargando(false);
+          }
+        }
+      } catch (stateError) {
+        if (activo) {
+          setError(
+            stateError instanceof Error
+              ? stateError.message
+              : 'No se pudo comprobar la autenticación biométrica.'
+          );
+        }
+      } finally {
+        if (activo) setComprobandoSesion(false);
+      }
+    }
+
+    void comprobarSesion();
+
+    return () => {
+      activo = false;
+    };
+  }, [esRegistro, router]);
 
   async function enviarFormulario() {
     setError(null);
@@ -31,6 +91,8 @@ export function FormularioAuth({ modo }: { modo: ModoAuth }) {
     try {
       if (esRegistro) {
         await registrar(nombre, email, contrasena);
+      } else if (biometriaDisponible && !usarContrasena) {
+        await ingresarConBiometria();
       } else {
         await ingresar(email, contrasena);
       }
@@ -55,13 +117,15 @@ export function FormularioAuth({ modo }: { modo: ModoAuth }) {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.replace('/(tabs)/perfil')}
-          style={styles.backButton}
-        >
-          <Text style={styles.backText}>‹ Volver al perfil</Text>
-        </Pressable>
+        {!comprobandoSesion && !sesionGuardada && (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.replace('/(tabs)/perfil')}
+            style={styles.backButton}
+          >
+            <Text style={styles.backText}>‹ Volver al perfil</Text>
+          </Pressable>
+        )}
 
         <View style={styles.card}>
           <Text style={styles.title}>
@@ -85,32 +149,36 @@ export function FormularioAuth({ modo }: { modo: ModoAuth }) {
             />
           )}
 
-          <TextInput
-            accessibilityLabel="Email"
-            autoCapitalize="none"
-            autoComplete="email"
-            keyboardType="email-address"
-            onChangeText={setEmail}
-            placeholder="Email"
-            returnKeyType="next"
-            style={styles.input}
-            textContentType="emailAddress"
-            value={email}
-          />
+          {(esRegistro || !biometriaDisponible || usarContrasena) && (
+            <>
+              <TextInput
+                accessibilityLabel="Email"
+                autoCapitalize="none"
+                autoComplete="email"
+                keyboardType="email-address"
+                onChangeText={setEmail}
+                placeholder="Email"
+                returnKeyType="next"
+                style={styles.input}
+                textContentType="emailAddress"
+                value={email}
+              />
 
-          <TextInput
-            accessibilityLabel="Contraseña"
-            autoCapitalize="none"
-            autoComplete={esRegistro ? 'new-password' : 'password'}
-            onChangeText={setContrasena}
-            onSubmitEditing={enviarFormulario}
-            placeholder="Contraseña"
-            returnKeyType="done"
-            secureTextEntry
-            style={styles.input}
-            textContentType={esRegistro ? 'newPassword' : 'password'}
-            value={contrasena}
-          />
+              <TextInput
+                accessibilityLabel="Contraseña"
+                autoCapitalize="none"
+                autoComplete={esRegistro ? 'new-password' : 'password'}
+                onChangeText={setContrasena}
+                onSubmitEditing={enviarFormulario}
+                placeholder="Contraseña"
+                returnKeyType="done"
+                secureTextEntry
+                style={styles.input}
+                textContentType={esRegistro ? 'newPassword' : 'password'}
+                value={contrasena}
+              />
+            </>
+          )}
 
           {error && (
             <View accessibilityRole="alert" style={styles.errorBox}>
@@ -127,24 +195,57 @@ export function FormularioAuth({ modo }: { modo: ModoAuth }) {
             {cargando ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.primaryButtonText}>
-                {esRegistro ? 'Crear cuenta' : 'Iniciar sesión'}
-              </Text>
+              <View style={styles.primaryButtonContent}>
+                {!esRegistro && biometriaDisponible && !usarContrasena && (
+                  <Ionicons name="finger-print-outline" size={22} color="#FFFFFF" />
+                )}
+                <Text style={styles.primaryButtonText}>
+                  {esRegistro
+                    ? 'Crear cuenta'
+                    : biometriaDisponible && !usarContrasena
+                      ? 'Ingresar con huella o rostro'
+                      : 'Iniciar sesión'}
+                </Text>
+              </View>
             )}
           </Pressable>
 
-          <Pressable
-            accessibilityRole="button"
-            disabled={cargando}
-            onPress={() => router.push(esRegistro ? '/login' : '/registro')}
-            style={styles.switchButton}
-          >
-            <Text style={styles.switchText}>
-              {esRegistro
-                ? '¿Ya tenés cuenta? Iniciá sesión'
-                : '¿No tenés cuenta? Creá una'}
+          {!esRegistro && biometriaDisponible && (
+            <Pressable
+              accessibilityRole="button"
+              disabled={cargando}
+              onPress={() => {
+                setError(null);
+                setUsarContrasena((actual) => !actual);
+              }}
+              style={styles.switchButton}
+            >
+              <Text style={styles.switchText}>
+                {usarContrasena ? 'Volver al ingreso con huella o rostro' : 'Ingresar con email y contraseña'}
+              </Text>
+            </Pressable>
+          )}
+
+          {!esRegistro && sesionGuardada && !biometriaDisponible && (
+            <Text style={styles.fallbackText}>
+              Este dispositivo no tiene biometría configurada. Ingresá con email y contraseña.
             </Text>
-          </Pressable>
+          )}
+
+          {(!sesionGuardada || esRegistro) && (
+            <Pressable
+              accessibilityRole="button"
+              disabled={cargando}
+              onPress={() => router.push(esRegistro ? '/login' : '/registro')}
+              style={styles.switchButton}
+            >
+              <Text style={styles.switchText}>
+                {esRegistro
+                  ? '¿Ya tenés cuenta? Iniciá sesión'
+                  : '¿No tenés cuenta? Creá una'}
+              </Text>
+            </Pressable>
+          )}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -191,8 +292,10 @@ const styles = StyleSheet.create({
     marginTop: 20,
     minHeight: 50,
   },
+  primaryButtonContent: { alignItems: 'center', flexDirection: 'row', gap: 8 },
   disabledButton: { opacity: 0.65 },
   primaryButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+  fallbackText: { color: '#64748B', fontSize: 13, lineHeight: 18, marginTop: 14 },
   switchButton: { alignItems: 'center', marginTop: 18, padding: 8 },
   switchText: { color: '#176B87', fontSize: 14, fontWeight: '600' },
 });

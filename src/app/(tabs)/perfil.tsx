@@ -10,7 +10,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { cerrarSesion, obtenerUsuarioActual } from '../../servicios/auth';
+import {
+  cerrarSesion,
+  obtenerUsuarioActual,
+} from '../../servicios/auth';
 import { alternarFavorito, obtenerFavoritos } from '../../servicios/favoritos';
 import type { LugarResumen, Usuario } from '../../tipos/usuario';
 
@@ -139,6 +142,7 @@ export default function PerfilFavoritosScreen() {
           <Text style={styles.userEmail}>{usuario.email}</Text>
         </View>
         <TouchableOpacity
+          accessibilityLabel="Cerrar sesión"
           onPress={() => void handleCerrarSesion()}
           style={styles.logoutBtn}
         >

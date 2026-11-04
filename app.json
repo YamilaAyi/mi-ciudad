@@ -35,7 +35,27 @@
       ],
       "@react-native-vector-icons/ionicons",
       "expo-secure-store",
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Mi Ciudad usa la cámara para leer el código QR de los carteles.",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Mi Ciudad usa tu ubicación para confirmar que estás en el lugar que visitás y mostrarte lo que tenés cerca."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Mi Ciudad necesita la cámara para que puedas sacar una foto de tu visita.",
+          "photosPermission": "Mi Ciudad necesita acceder a tus fotos para que puedas elegir una para tu visita."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

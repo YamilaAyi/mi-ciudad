@@ -20,6 +20,7 @@ import {
 } from '@/data/eventos';
 import { duracionTexto, fechaLarga, finDeEvento, hora } from '@/lib/fechas';
 import { MINUTOS_AVISO } from '@/lib/notificaciones';
+import { ErrorApi } from '@/servicios/cliente';
 
 export default function EventoScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -72,9 +73,12 @@ export default function EventoScreen() {
     } catch (error) {
       console.error('Error al guardar el evento o programar el aviso:', error);
 
+      // Los mensajes de la API están pensados para mostrarse tal cual.
       Alert.alert(
         'No se pudo completar la operación',
-        'Ocurrió un error al guardar el evento. Volvé a intentarlo.',
+        error instanceof ErrorApi
+          ? error.message
+          : 'Ocurrió un error al guardar el evento. Volvé a intentarlo.',
       );
     } finally {
       setGuardando(false);
@@ -123,7 +127,7 @@ export default function EventoScreen() {
         </View>
       )}
 
-      <Text style={styles.categoria}>{evento.categoria}</Text>
+      {evento.categoria ? <Text style={styles.categoria}>{evento.categoria}</Text> : null}
       <Text style={[styles.titulo, anulado && styles.tituloAnulado]}>
         {evento.titulo}
       </Text>

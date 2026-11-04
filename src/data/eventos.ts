@@ -20,14 +20,16 @@ export type Evento = {
   id: string;
   titulo: string;
   descripcion: string;
-  categoria: CategoriaEvento;
+  /** La API todavía no manda categoría, por eso es opcional. */
+  categoria?: CategoriaEvento;
   /** ISO 8601 con zona horaria, ej: 2026-10-21T18:00:00-03:00 */
   inicio: string;
   duracionMin: number;
   gratuito: boolean;
   /** Texto libre cuando no es gratuito, ej: "$3.000" */
   precio?: string;
-  lugarId?: number;
+  /** number = catálogo local (demo); string = id de lugar de la API. */
+  lugarId?: number | string;
   direccion?: string;
   imagen: ImageSourcePropType;
   estado: EstadoEvento;
@@ -36,12 +38,14 @@ export type Evento = {
 export const ETIQUETA_ESTADO: Record<EstadoEvento, string> = {
   programado: 'Confirmado',
   cancelado: 'Cancelado',
-  suspendido_lluvia: 'Suspendido por lluvia',
+  suspendido_lluvia: 'Suspendido',
 };
 
-export function ubicacionDeEvento(e: Evento): { texto: string; lugarId?: number } {
-  const lugar = buscarLugar(e.lugarId);
+export function ubicacionDeEvento(e: Evento): { texto: string; lugarId?: number | string } {
+  const lugar = typeof e.lugarId === 'number' ? buscarLugar(e.lugarId) : undefined;
   if (lugar) return { texto: lugar.nombre, lugarId: lugar.id };
+  // Evento de la API: el servicio deja el nombre del lugar resuelto en `direccion`.
+  if (e.lugarId != null) return { texto: e.direccion ?? 'Ubicación a confirmar', lugarId: e.lugarId };
   return { texto: e.direccion ?? 'Ubicación a confirmar' };
 }
 

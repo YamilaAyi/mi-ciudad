@@ -18,7 +18,14 @@ import {
   pedirPermiso,
   programarAviso,
 } from '@/lib/notificaciones';
-import { obtenerEventos, simularEstado as simularEstadoService } from '@/services/eventos-service';
+import {
+  enModoDemo,
+  guardarEnServidor,
+  obtenerEventos,
+  obtenerIdsGuardadosServidor,
+  quitarDelServidor,
+  simularEstado as simularEstadoService,
+} from '@/services/eventos-service';
 
 const CLAVE_GUARDADOS = 'agenda:guardados';
 
@@ -74,6 +81,26 @@ export function EventosProvider({ children }: { children: ReactNode }) {
     const actual: Guardados = { ...guardadosRef.current };
     let huboCambios = false;
 
+    // El servidor es la fuente de verdad de QUÉ eventos están guardados (lo que
+    // sigue siendo local son los recordatorios). Si no se pudo consultar, no se toca nada.
+    const idsServidor = enModoDemo() ? null : await obtenerIdsGuardadosServidor();
+    if (idsServidor) {
+      const enServidor = new Set(idsServidor);
+      for (const id of Object.keys(actual)) {
+        if (enServidor.has(id)) continue;
+        await cancelarAviso(actual[id].avisoId);
+        delete actual[id];
+        huboCambios = true;
+      }
+      for (const id of idsServidor) {
+        if (actual[id]) continue;
+        const evento = frescos.find((e) => e.id === id);
+        if (!evento) continue;
+        actual[id] = { estadoVisto: evento.estado };
+        huboCambios = true;
+      }
+    }
+
     for (const id of Object.keys(actual)) {
       const evento = frescos.find((e) => e.id === id);
       if (!evento) continue;
@@ -128,13 +155,15 @@ export function EventosProvider({ children }: { children: ReactNode }) {
 
       // Quitar
       if (actual[evento.id]) {
+        if (!enModoDemo()) await quitarDelServidor(evento.id);
         await cancelarAviso(actual[evento.id].avisoId);
         delete actual[evento.id];
         actualizarGuardados(actual);
         return { guardado: false, avisoProgramado: false, permisoDenegado: false };
       }
 
-      // Guardar
+      // Guardar (primero en el servidor: si falla, no queda nada a medias)
+      if (!enModoDemo()) await guardarEnServidor(evento.id);
       const permiso = await pedirPermiso();
       const avisoId = permiso ? await programarAviso(evento) : null;
       actual[evento.id] = { estadoVisto: evento.estado, avisoId: avisoId ?? undefined };

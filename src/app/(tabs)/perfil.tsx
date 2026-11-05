@@ -174,7 +174,18 @@ export default function PerfilFavoritosScreen() {
           contentContainerStyle={{ paddingBottom: 24 }}
           renderItem={({ item }) => (
             <View style={styles.card}>
-              <View style={styles.cardOpen}>
+              <TouchableOpacity //codigo reutilizado de la pantalla de favoritos para abrir el detalle del lugar
+                accessibilityRole="button"
+                accessibilityLabel={`Ver detalle de ${item.nombre}`}
+                onPress={() =>
+                  router.push({
+                    pathname: '/detalle',
+                    params: { id: item.id },
+                  })
+                }
+                style={styles.cardOpen}
+              > 
+              
                 <Image
                   source={
                     item.imagenes[0]
@@ -189,7 +200,7 @@ export default function PerfilFavoritosScreen() {
                     {item.categoriaId.replace('cat-', '').replaceAll('-', ' ')}
                   </Text>
                 </View>
-              </View>
+              </TouchableOpacity>
               <TouchableOpacity
                 accessibilityLabel={`Quitar ${item.nombre} de favoritos`}
                 onPress={() => void handleQuitarFavorito(item.id)}

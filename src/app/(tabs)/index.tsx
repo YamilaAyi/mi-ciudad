@@ -5,8 +5,11 @@ import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { View, Text } from 'react-native';
 import { ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
 
 export default function HomeScreen() {
+  const [busqueda, setBusqueda] = useState('');
+
   return (
     <View style={styles.container}>
      <View style={styles.safeArea}>
@@ -26,64 +29,103 @@ export default function HomeScreen() {
   Descubrí Colón, Entre Ríos
           </Text>
 
+<TextInput
+  style={styles.buscador}
+  placeholder="¿Qué lugar querés conocer?"
+  value={busqueda}
+  onChangeText={setBusqueda}
+  returnKeyType="search"
+  onSubmitEditing={() =>
+    router.push({
+      pathname: '/lugares',
+      params: { busqueda: busqueda },
+    })
+  }
+/>
 <View style={styles.contenedorBotones}>
+<Pressable
+  style={styles.botonExplorar}
+  onPress={() => router.push({
+    pathname: '/lugares',
+    params: { busqueda: busqueda }
+  })}
+>
+  <Ionicons name="search-outline" size={28} color="#176B87" />
+  <Text style={styles.textoBoton}>Buscar</Text>
+</Pressable>
 
-<View style={styles.contenedorBotones}>
+<Pressable
+  style={styles.botonExplorar}
+  onPress={() =>
+    router.push({
+      pathname: '/lugares',
+      params: { categoria: 'Playas y termas' },
+    })
+  }
+>
+  <Ionicons name="water-outline" size={28} color="#176B87" />
+  <Text style={styles.textoBoton}>Playas y termas</Text>
+</Pressable>
 
-  {/* Lugares turísticos */}
-  <Pressable
-    style={styles.botonExplorar}
-    onPress={() => router.push('/lugares')}
-  >
-    <Ionicons
-      name="location-outline"
-      size={28}
-      color="#176B87"
-    />
-    <Text style={styles.textoBoton}>
-      Lugares turísticos
-    </Text>
-  </Pressable>
+<Pressable
+  style={styles.botonExplorar}
+  onPress={() =>
+    router.push({
+      pathname: '/lugares',
+      params: { categoria: 'Naturaleza' },
+    })
+  }
+>
+  <Ionicons
+    name="leaf-outline"
+    size={28}
+    color="#176B87"
+  />
+  <Text style={styles.textoBoton}>
+    Naturaleza
+  </Text>
+</Pressable>
 
-  {/* Agenda de eventos */}
-  <Pressable style={styles.botonExplorar}>
-    <Ionicons
-      name="calendar-outline"
-      size={28}
-      color="#176B87"
-    />
-    <Text style={styles.textoBoton}>
-      Agenda de eventos
-    </Text>
-  </Pressable>
-
-  {/* Mapa */}
-  <Pressable style={styles.botonExplorar}>
-    <Ionicons
-      name="map-outline"
-      size={28}
-      color="#176B87"
-    />
-    <Text style={styles.textoBoton}>
-      Mapa
-    </Text>
-  </Pressable>
-
-  {/* Mi recorrido */}
-  <Pressable style={styles.botonExplorar}>
-    <Ionicons
-      name="navigate-outline"
-      size={28}
-      color="#176B87"
-    />
-    <Text style={styles.textoBoton}>
-      Mi recorrido
-    </Text>
-  </Pressable>
-
+<Pressable
+  style={styles.botonExplorar}
+  onPress={() =>
+    router.push({
+      pathname: '/lugares',
+      params: { categoria: 'Museos y patrimonio' },
+    })
+  }
+>
+  <Ionicons
+    name="business-outline"
+    size={28}
+    color="#176B87"
+  />
+  <Text style={styles.textoBoton}>
+    Historia y cultura
+  </Text>
+</Pressable>
 </View>
 
-</View>
+<Pressable
+  style={[styles.botonExplorar, { width: 300, height: 55, marginTop: 15 }]}
+  onPress={() =>
+    router.push({
+      pathname: '/lugares',
+      params: { categoria: 'Todas', busqueda: '' },
+    })
+  }
+>
+  <Text style={styles.textoBoton}>
+    Ver todos los lugares turísticos
+  </Text>
+</Pressable>
+
+
+
+
+
+
+
 
 
 
@@ -156,7 +198,7 @@ buscador: {
 botonExplorar: {
   backgroundColor: '#FFFFFF',
   width: 140,
-  height: 110,
+  height: 85,
   borderRadius: 12,
   alignItems: 'center',
   justifyContent: 'center',
@@ -168,6 +210,7 @@ contenedorBotones: {
   justifyContent: 'center',
   gap: 12,
   width: 300,
+  marginTop: 20,
 },
 tituloCategorias: {
   fontSize: 22,

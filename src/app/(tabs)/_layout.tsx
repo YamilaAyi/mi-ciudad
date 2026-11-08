@@ -1,6 +1,5 @@
-
-import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Tabs } from 'expo-router';
 
 export default function TabsLayout() {
   return (
@@ -31,6 +30,16 @@ export default function TabsLayout() {
           title: 'Mapa',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="map-outline" size={size} color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="recorrido"
+        options={{
+          title: 'Mi recorrido',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="navigate-outline" size={size} color={color} />
           ),
         }}
       />

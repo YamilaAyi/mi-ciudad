@@ -10,7 +10,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { cerrarSesion, obtenerUsuarioActual } from '../../servicios/auth';
+import {
+  cerrarSesion,
+  obtenerUsuarioActual,
+} from '../../servicios/auth';
 import { alternarFavorito, obtenerFavoritos } from '../../servicios/favoritos';
 import type { LugarResumen, Usuario } from '../../tipos/usuario';
 
@@ -139,6 +142,7 @@ export default function PerfilFavoritosScreen() {
           <Text style={styles.userEmail}>{usuario.email}</Text>
         </View>
         <TouchableOpacity
+          accessibilityLabel="Cerrar sesión"
           onPress={() => void handleCerrarSesion()}
           style={styles.logoutBtn}
         >
@@ -170,7 +174,18 @@ export default function PerfilFavoritosScreen() {
           contentContainerStyle={{ paddingBottom: 24 }}
           renderItem={({ item }) => (
             <View style={styles.card}>
-              <View style={styles.cardOpen}>
+              <TouchableOpacity //codigo reutilizado de la pantalla de favoritos para abrir el detalle del lugar
+                accessibilityRole="button"
+                accessibilityLabel={`Ver detalle de ${item.nombre}`}
+                onPress={() =>
+                  router.push({
+                    pathname: '/detalle',
+                    params: { id: item.id },
+                  })
+                }
+                style={styles.cardOpen}
+              > 
+              
                 <Image
                   source={
                     item.imagenes[0]
@@ -185,7 +200,7 @@ export default function PerfilFavoritosScreen() {
                     {item.categoriaId.replace('cat-', '').replaceAll('-', ' ')}
                   </Text>
                 </View>
-              </View>
+              </TouchableOpacity>
               <TouchableOpacity
                 accessibilityLabel={`Quitar ${item.nombre} de favoritos`}
                 onPress={() => void handleQuitarFavorito(item.id)}

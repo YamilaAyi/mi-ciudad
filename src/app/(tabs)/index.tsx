@@ -1,11 +1,7 @@
-import { router } from 'expo-router';
-import { StyleSheet , Pressable, TextInput , Image , ImageBackground} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-import { View, Text } from 'react-native';
-import { ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
+import { router } from 'expo-router';
+import { ImageBackground, Pressable, StyleSheet, Text, View } from 'react-native';
 
 export default function HomeScreen() {
   const [busqueda, setBusqueda] = useState('');

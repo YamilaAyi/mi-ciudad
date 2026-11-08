@@ -4,7 +4,7 @@ import TarjetaLugar from '../components/TarjetaLugar';
 import { obtenerLugares ,  usandoCacheLugares } from '../servicios/lugares';
 import type { Lugar } from '../tipos/entities';
 import { Ionicons } from '@expo/vector-icons';
-
+import { useLocalSearchParams } from 'expo-router';
 
 function obtenerNombreCategoria(categoriaId: string): string {
   switch (categoriaId) {
@@ -30,10 +30,17 @@ function obtenerNombreCategoria(categoriaId: string): string {
 }
 
 
-
 export default function LugaresScreen() {
-      const [busqueda, setBusqueda] = useState('')
-      const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('Todas');
+
+const {
+  busqueda: busquedaInicial,
+  categoria: categoriaInicial,
+} = useLocalSearchParams<{
+  busqueda?: string;
+  categoria?: string;
+}>();
+      const [busqueda, setBusqueda] = useState(busquedaInicial ?? '');
+      const [categoriaSeleccionada, setCategoriaSeleccionada] = useState(categoriaInicial ?? 'Todas');
       const [lugaresDelServicio, setLugaresDelServicio] = useState<Lugar[]>([]);
       const [cargando, setCargando] = useState(true);
 const [error, setError] = useState<string | null>(null);
@@ -49,7 +56,7 @@ async function cargarLugares() {
     setLugaresDelServicio(datos);
     setMostrandoCache(usandoCacheLugares);
 
-  } catch (error) {
+  } catch  {
     setLugaresDelServicio([]);
     setError('No se pudieron cargar los lugares turísticos.');
 
@@ -62,10 +69,18 @@ useEffect(() => {
   cargarLugares();
 }, []);
 
-   const lugaresFiltrados = lugaresDelServicio.filter((lugar) =>
+const lugaresFiltrados = lugaresDelServicio.filter((lugar) =>
   lugar.nombre.toLowerCase().includes(busqueda.toLowerCase()) &&
-  (categoriaSeleccionada === 'Todas' ||
-   obtenerNombreCategoria(lugar.categoriaId) === categoriaSeleccionada)
+  (
+    categoriaSeleccionada === 'Todas' ||
+    (
+      categoriaSeleccionada === 'Playas y termas' &&
+      ['Playas', 'Termas'].includes(
+        obtenerNombreCategoria(lugar.categoriaId)
+      )
+    ) ||
+    obtenerNombreCategoria(lugar.categoriaId) === categoriaSeleccionada
+  )
 );
 
   return (
@@ -94,6 +109,21 @@ useEffect(() => {
   <Text style={{ color: '#664D03', fontSize: 14, flex: 1 }}>
     Estás viendo información guardada. Algunos datos podrían no estar actualizados.
   </Text>
+<Pressable
+  onPress={cargarLugares}
+  style={{
+    backgroundColor: '#176B87',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 10,
+    alignItems: 'center',
+  }}
+>
+  <Text style={{ color: '#FFFFFF', fontWeight: 'bold' }}>
+    Reintentar conexión
+  </Text>
+</Pressable>
+  
 </View>
 )}
       {cargando && (
@@ -103,6 +133,12 @@ useEffect(() => {
 )}
 {error && (
   <View style={{ alignItems: 'center', marginTop: 20 }}>
+    <Ionicons
+  name="alert-circle-outline"
+  size={48}
+  color="#C62828"
+  style={{ marginBottom: 12 }}
+/>
     <Text style={{ color: 'red', marginBottom: 10 }}>
       {error}
     </Text>
@@ -114,7 +150,8 @@ useEffect(() => {
     </Pressable>
   </View>
 )}
-
+{!cargando && !error && (
+  <>
 <TextInput
   style={styles.buscador}
   placeholder="Buscar lugares turísticos..."
@@ -151,7 +188,7 @@ useEffect(() => {
   ))}
 </View>
 
-{lugaresFiltrados.length === 0 && (
+{!cargando && !error && lugaresFiltrados.length === 0 && (
   <Text style={{ textAlign: 'center', marginTop: 30, color: '#666666' }}>
     No se encontraron lugares turísticos.
   </Text>
@@ -165,6 +202,8 @@ useEffect(() => {
   imagen={lugar.imagenes?.[0]}
 />
 ))}
+  </>
+)}
  
 </ScrollView>
 

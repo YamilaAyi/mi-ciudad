@@ -16,6 +16,13 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npx expo start
    ```
 
+## Cuenta y favoritos
+
+La sesión se conserva en el almacenamiento seguro del dispositivo. Desde el perfil se puede
+bloquear para volver a ingresar con huella o rostro cuando el dispositivo tenga biometría
+configurada; si no, se usa email y contraseña. Los favoritos se guardan en SQLite y los cambios
+hechos sin conexión quedan pendientes hasta que la API vuelva a estar disponible.
+
 In the output, you'll find options to open the app in a
 
 - [development build](https://docs.expo.dev/develop/development-builds/introduction/)
@@ -54,3 +61,4 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+

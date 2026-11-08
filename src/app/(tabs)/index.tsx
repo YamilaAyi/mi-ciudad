@@ -1,10 +1,6 @@
-import { router } from 'expo-router';
-import { StyleSheet , Pressable, TextInput , Image , ImageBackground} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-import { View, Text } from 'react-native';
-import { ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { ImageBackground, Pressable, StyleSheet, Text, View } from 'react-native';
 
 export default function HomeScreen() {
   return (
@@ -46,7 +42,7 @@ export default function HomeScreen() {
   </Pressable>
 
   {/* Agenda de eventos */}
-  <Pressable style={styles.botonExplorar}>
+    <Pressable style={styles.botonExplorar} onPress={() => router.push('/agenda')}>
     <Ionicons
       name="calendar-outline"
       size={28}
@@ -58,7 +54,7 @@ export default function HomeScreen() {
   </Pressable>
 
   {/* Mapa */}
-  <Pressable style={styles.botonExplorar}>
+   <Pressable style={styles.botonExplorar} onPress={() => router.push('/mapa')}>
     <Ionicons
       name="map-outline"
       size={28}
@@ -69,8 +65,8 @@ export default function HomeScreen() {
     </Text>
   </Pressable>
 
-  {/* Mi recorrido */}
-  <Pressable style={styles.botonExplorar}>
+     {/* Mi recorrido */}
+  <Pressable style={styles.botonExplorar} onPress={() => router.push('/recorrido')}>
     <Ionicons
       name="navigate-outline"
       size={28}

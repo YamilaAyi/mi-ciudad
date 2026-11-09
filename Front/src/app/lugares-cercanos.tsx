@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -39,15 +39,30 @@ export default function LugaresCercanosScreen() {
   const [error, setError] = useState<string | null>(null);
   const [mostrandoCache, setMostrandoCache] = useState(false);
 
+  // Guardamos los lugares en memoria para no pedirlos a la API
+  // cada vez que el usuario actualiza su ubicación.
+  const lugaresGuardados = useRef<Lugar[] | null>(null);
+
   const cargarLugaresCercanos = useCallback(async () => {
     setCargando(true);
     setError(null);
 
     try {
+      const necesitaCargarLugares = lugaresGuardados.current === null;
+
       const [ubicacion, lugares] = await Promise.all([
-        obtenerUbicacionActual(),
-        obtenerLugares(),
+        obtenerUbicacionActual({
+          permitirUltimaUbicacion: true,
+        }),
+        necesitaCargarLugares
+          ? obtenerLugares()
+          : Promise.resolve(lugaresGuardados.current!),
       ]);
+
+      if (necesitaCargarLugares) {
+        lugaresGuardados.current = lugares;
+        setMostrandoCache(usandoCacheLugares);
+      }
 
       const ordenados = lugares
         .filter(
@@ -67,9 +82,9 @@ export default function LugaresCercanosScreen() {
         .slice(0, 5);
 
       setCercanos(ordenados);
-      setMostrandoCache(usandoCacheLugares);
     } catch (e) {
-      setCercanos([]);
+      // IMPORTANTE:
+      // No borramos los lugares que ya estaban cargados.
       setError(
         e instanceof Error
           ? e.message
@@ -89,7 +104,6 @@ export default function LugaresCercanosScreen() {
       style={styles.container}
       contentContainerStyle={styles.contenido}
     >
-
       <Text style={styles.descripcion}>
         Descubrí los cinco lugares turísticos más próximos
         a tu ubicación actual.
@@ -104,7 +118,9 @@ export default function LugaresCercanosScreen() {
         disabled={cargando}
       >
         <Text style={styles.textoBoton}>
-          {cargando ? "Buscando lugares..." : "Actualizar ubicación"}
+          {cargando
+            ? "Actualizando ubicación..."
+            : "Actualizar ubicación"}
         </Text>
       </Pressable>
 
@@ -116,14 +132,22 @@ export default function LugaresCercanosScreen() {
         />
       )}
 
-      {!cargando && error && (
-        <Text style={styles.error}>{error}</Text>
+      {error && !cargando && (
+        <View>
+          <Text style={styles.error}>{error}</Text>
+
+          {cercanos.length > 0 && (
+            <Text style={styles.aviso}>
+              Seguimos mostrando los lugares calculados
+              con tu ubicación anterior.
+            </Text>
+          )}
+        </View>
       )}
 
-      {!cargando && !error && mostrandoCache && (
+      {mostrandoCache && cercanos.length > 0 && (
         <Text style={styles.aviso}>
-          Estás viendo lugares guardados. Las distancias
-          se calcularon con tu ubicación actual.
+          Estás viendo lugares guardados en el dispositivo.
         </Text>
       )}
 
@@ -133,25 +157,24 @@ export default function LugaresCercanosScreen() {
         </Text>
       )}
 
-      {!cargando &&
-        !error &&
-        cercanos.map(({ lugar, distancia }, indice) => (
-          <View key={lugar.id} style={styles.tarjeta}>
-            <Text style={styles.distancia}>
-              {indice + 1}. A {formatearDistancia(distancia)}
-              {" "}de tu ubicación
-            </Text>
+      {/* Conservamos los lugares incluso si falla el GPS. */}
+      {cercanos.map(({ lugar, distancia }, indice) => (
+        <View key={lugar.id} style={styles.tarjeta}>
+          <Text style={styles.distancia}>
+            {indice + 1}. A {formatearDistancia(distancia)}{" "}
+            de tu ubicación
+          </Text>
 
-            <TarjetaLugar
-              id={lugar.id}
-              nombre={lugar.nombre}
-              categoria={
-                categorias[lugar.categoriaId] ?? "Otros"
-              }
-              imagen={lugar.imagenes?.[0]}
-            />
-          </View>
-        ))}
+          <TarjetaLugar
+            id={lugar.id}
+            nombre={lugar.nombre}
+            categoria={
+              categorias[lugar.categoriaId] ?? "Otros"
+            }
+            imagen={lugar.imagenes?.[0]}
+          />
+        </View>
+      ))}
     </ScrollView>
   );
 }
@@ -164,12 +187,6 @@ const styles = StyleSheet.create({
   contenido: {
     padding: 20,
     paddingBottom: 40,
-  },
-  titulo: {
-    fontSize: 25,
-    fontWeight: "bold",
-    color: "#176B87",
-    marginBottom: 10,
   },
   descripcion: {
     fontSize: 15,
@@ -212,5 +229,7 @@ const styles = StyleSheet.create({
   aviso: {
     color: "#666666",
     marginVertical: 12,
+    fontSize: 14,
+    lineHeight: 20,
   },
 });

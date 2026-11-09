@@ -94,6 +94,23 @@ export default function MapaScreen() {
     }
   }
 
+  // Volver al mapa turístico de Colón.
+  function volverAColon() {
+    setMostrarFiltros(false);
+    setCategoriaSeleccionada("Todas");
+    setLugarSeleccionado(null);
+
+    mapaRef.current?.animateToRegion(
+      {
+        latitude: -32.2231,
+        longitude: -58.1443,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      },
+      700
+    );
+  }
+
   // Seleccionar un marcador y calcular su distancia.
   async function seleccionarLugar(lugar: Lugar) {
     setLugarSeleccionado(lugar);
@@ -192,6 +209,25 @@ export default function MapaScreen() {
                 }
               />
             </Pressable>
+
+            {/* Botón para regresar a Colón */}
+            {!mostrarFiltros && (
+              <Pressable
+                style={styles.botonVolverColon}
+                onPress={volverAColon}
+                accessibilityRole="button"
+                accessibilityLabel="Volver al mapa turístico de Colón"
+              >
+                <Ionicons
+                  name="arrow-back"
+                  size={16}
+                  color="#176B87"
+                />
+                <Text style={styles.textoVolverColon}>
+                  Colón
+                </Text>
+              </Pressable>
+            )}
 
             <Pressable
               style={styles.botonIcono}
@@ -344,10 +380,11 @@ const styles = StyleSheet.create({
     right: 12,
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
   },
   controlesDerecha: {
-    flexDirection: "row",
+    flexDirection: "column",
+    alignItems: "flex-end",
     gap: 10,
   },
   botonCercanos: {
@@ -373,6 +410,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     elevation: 4,
+  },
+  botonVolverColon: {
+    backgroundColor: "#FFFFFF",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 12,
+    height: 36,
+    borderRadius: 20,
+    elevation: 4,
+  },
+  textoVolverColon: {
+    color: "#176B87",
+    fontWeight: "bold",
+    fontSize: 12,
   },
   botonFiltroActivo: {
     backgroundColor: "#176B87",

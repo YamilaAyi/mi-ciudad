@@ -28,7 +28,18 @@ export default function TabLayout() {
             },
           }}
         />
-
+        <Stack.Screen
+          name="lugares-cercanos"
+          options={{
+            title: "Lugares cercanos",
+            headerShown: true,
+            headerTitleStyle: {
+              fontSize: 24,
+              fontWeight: "bold",
+              color: "#176B87",
+            },
+          }}
+        />
         <Stack.Screen
           name="detalle"
           options={{

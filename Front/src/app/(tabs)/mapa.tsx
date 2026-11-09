@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import { obtenerLugares } from "../../servicios/lugares";
 import type { Lugar } from "../../tipos/entities";
+import { router } from "expo-router";
 
 export default function MapaScreen() {
   const [lugares, setLugares] = useState<Lugar[]>([]);
@@ -22,6 +23,15 @@ export default function MapaScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.titulo}>Mapa turístico</Text>
+
+      <Pressable
+        style={styles.botonCercanos}
+        onPress={() => router.push("/lugares-cercanos")}
+      >
+        <Text style={styles.textoBotonCercanos}>
+          Ver lugares cercanos
+        </Text>
+      </Pressable>
 
       <MapView
         provider={PROVIDER_GOOGLE}
@@ -71,5 +81,18 @@ const styles = StyleSheet.create({
   },
   mapa: {
     flex: 1,
+  },
+  botonCercanos: {
+    backgroundColor: "#176B87",
+    padding: 12,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  textoBotonCercanos: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "bold",
   },
 });

@@ -128,7 +128,7 @@ export const LUGARES_SEMILLA: LugarSemilla[] = [
     categoriaId: 'cat-museos',
     descripcionCorta: 'Molino de viento de 1888 levantado por colonos suizos.',
     descripcion: 'Construido en 1888 por Juan Bautista Forclaz ...',
-    coordenadas: { latitud: -32.1904, longitud: -58.1932 },
+   coordenadas: { latitud: -32.216702, longitud: -58.185962 },
     direccion: 'Colonia San José, Ruta Provincial 26',
     imagenes: ['museums-1.png'],
     horarios: [

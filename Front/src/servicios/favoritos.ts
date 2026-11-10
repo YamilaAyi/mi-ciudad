@@ -34,6 +34,8 @@ function abrirBaseFavoritos(): Promise<SQLite.SQLiteDatabase> {
     baseFavoritosPromise = (async () => {
       const base = await SQLite.openDatabaseAsync('mi-ciudad-favoritos.db');
       await base.execAsync(`
+        -- Una fila representa el estado local de un favorito para un usuario.
+        -- accionPendiente conserva el cambio si no se pudo enviar a la API.
         CREATE TABLE IF NOT EXISTS favoritos (
           usuarioId TEXT NOT NULL,
           lugarId TEXT NOT NULL,
@@ -41,6 +43,7 @@ function abrirBaseFavoritos(): Promise<SQLite.SQLiteDatabase> {
           accionPendiente TEXT,
           PRIMARY KEY (usuarioId, lugarId)
         );
+        -- Permite saber si ya se descargó alguna vez la lista desde el servidor.
         CREATE TABLE IF NOT EXISTS favoritos_sync (
           usuarioId TEXT PRIMARY KEY NOT NULL,
           sincronizadoEn TEXT NOT NULL
@@ -53,6 +56,8 @@ function abrirBaseFavoritos(): Promise<SQLite.SQLiteDatabase> {
 }
 
 function esErrorDeConexion(error: unknown): boolean {
+  // Solo los fallos de conexión se resuelven con datos locales; otros errores
+  // de la API deben mostrarse para no ocultar, por ejemplo, una sesión vencida.
   return (
     (error instanceof Error &&
       error.message.startsWith('No se pudo conectar con la API')) ||
@@ -130,6 +135,8 @@ async function guardarFavoritoLocal(
   accionPendiente: AccionPendiente
 ): Promise<void> {
   const base = await abrirBaseFavoritos();
+  // Al actualizar la misma clave se conserva el lugar ya guardado si no se
+  // recibió otro, pero siempre se reemplaza la acción pendiente más reciente.
   await base.runAsync(
     `INSERT INTO favoritos (usuarioId, lugarId, lugar, accionPendiente)
      VALUES (?, ?, ?, ?)
@@ -153,6 +160,8 @@ async function guardarIdsDelServidor(usuarioId: string, ids: string[]): Promise<
   const filasLocales = await leerFilas(usuarioId);
   const idsServidor = new Set(ids);
 
+  // Se actualiza la copia local con el servidor sin borrar cambios que aún
+  // están en cola para sincronizar.
   for (const id of ids) {
     await guardarFavoritoLocal(usuarioId, id, null, null);
   }
@@ -177,9 +186,11 @@ async function sincronizarPendientes(usuarioId: string): Promise<void> {
     const ruta = `/yo/favoritos/${encodeURIComponent(fila.lugarId)}`;
     if (fila.accionPendiente === 'agregar') {
       await apiRequest<RespuestaUno<Favorito>>(ruta, { method: 'PUT' });
+      // Se quita de la cola solo después de que la API confirme el agregado.
       await guardarFavoritoLocal(usuarioId, fila.lugarId, null, null);
     } else {
       await apiRequest<null>(ruta, { method: 'DELETE' });
+      // Si falla la petición, la fila permanece para volver a intentarlo luego.
       await borrarFavoritoLocal(usuarioId, fila.lugarId);
     }
   }
@@ -188,6 +199,7 @@ async function sincronizarPendientes(usuarioId: string): Promise<void> {
 export async function obtenerIdsFavoritos(): Promise<string[]> {
   const usuarioId = await obtenerUsuarioId();
   try {
+    // Cada consulta vuelve a intentar primero los cambios que quedaron en cola.
     await sincronizarPendientes(usuarioId);
     const respuesta = await apiRequest<RespuestaLista<Favorito>>('/yo/favoritos');
     if (!respuesta) {
@@ -204,6 +216,7 @@ export async function obtenerIdsFavoritos(): Promise<string[]> {
       'SELECT usuarioId FROM favoritos_sync WHERE usuarioId = ?',
       [usuarioId]
     );
+    // Sin conexión se usa la copia local, pero solo si hay datos locales previos.
     if (!ultimaSincronizacion && filas.length === 0) throw error;
     return filas
       .filter((fila) => fila.accionPendiente !== 'quitar')
@@ -234,6 +247,8 @@ export async function obtenerFavoritos(): Promise<{ lugares: LugarResumen[] }> {
       lugares.push(resumen);
     } catch (error) {
       if (!esErrorDeConexion(error)) throw error;
+      // El detalle puede no estar cacheado aún; en ese caso se muestra un
+      // resumen provisional para que el favorito siga visible sin conexión.
       const fila = (await leerFilas(usuarioId)).find((favorito) => favorito.lugarId === id);
       lugares.push(fila ? leerLugar(fila) : lugarPendiente(id));
     }
@@ -270,6 +285,8 @@ export async function alternarFavorito(
     return true;
   } catch (error) {
     if (!esErrorDeConexion(error)) throw error;
+    // Refleja el cambio en la app inmediatamente y deja la operación en cola.
+    // La sincronización se reintentará la próxima vez que se consulten favoritos.
     await guardarFavoritoLocal(
       usuarioId,
       lugarId,

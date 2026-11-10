@@ -1,1 +1,9 @@
 node_modules
+
+# Archivos generados por Expo
+.expo/
+dist/
+expo-env.d.ts
+
+# Base de datos local de desarrollo
+api-mi-ciudad/datos/api.sqlite

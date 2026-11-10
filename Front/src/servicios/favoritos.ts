@@ -4,6 +4,7 @@ import type { LugarResumen } from '../tipos/usuario';
 import { leerCache } from './baseLocal';
 import { ApiError, apiRequest } from './api';
 
+// Los favoritos se sincronizan con la API y se guardan en SQLite para usarlos sin conexión.
 interface RespuestaLista<T> {
   datos: T[];
   meta: {
@@ -184,6 +185,7 @@ async function sincronizarPendientes(usuarioId: string): Promise<void> {
     if (!fila.accionPendiente) continue;
 
     const ruta = `/yo/favoritos/${encodeURIComponent(fila.lugarId)}`;
+    // Cada cambio offline queda en cola y se confirma localmente al sincronizarlo.
     if (fila.accionPendiente === 'agregar') {
       await apiRequest<RespuestaUno<Favorito>>(ruta, { method: 'PUT' });
       // Se quita de la cola solo después de que la API confirme el agregado.
@@ -210,6 +212,7 @@ export async function obtenerIdsFavoritos(): Promise<string[]> {
     return ids;
   } catch (error) {
     if (!esErrorDeConexion(error)) throw error;
+    // Si la API no está disponible, se muestran los datos locales y se respetan las bajas pendientes.
     const filas = await leerFilas(usuarioId);
     const base = await abrirBaseFavoritos();
     const ultimaSincronizacion = await base.getFirstAsync<{ usuarioId: string }>(
@@ -285,8 +288,8 @@ export async function alternarFavorito(
     return true;
   } catch (error) {
     if (!esErrorDeConexion(error)) throw error;
-    // Refleja el cambio en la app inmediatamente y deja la operación en cola.
-    // La sincronización se reintentará la próxima vez que se consulten favoritos.
+    // Refleja el cambio inmediatamente y lo deja en cola para reintentar la
+    // sincronización cuando se vuelvan a consultar los favoritos.
     await guardarFavoritoLocal(
       usuarioId,
       lugarId,

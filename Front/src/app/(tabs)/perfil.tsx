@@ -17,6 +17,7 @@ import {
 import { alternarFavorito, obtenerFavoritos } from '../../servicios/favoritos';
 import type { LugarResumen, Usuario } from '../../tipos/usuario';
 
+// Reúne el acceso a la cuenta y la lista personal de lugares favoritos.
 export default function PerfilFavoritosScreen() {
   const router = useRouter();
   const [usuario, setUsuario] = useState<Usuario | null>(null);
@@ -174,7 +175,7 @@ export default function PerfilFavoritosScreen() {
           contentContainerStyle={{ paddingBottom: 24 }}
           renderItem={({ item }) => (
             <View style={styles.card}>
-              <TouchableOpacity //codigo reutilizado de la pantalla de favoritos para abrir el detalle del lugar
+              <TouchableOpacity
                 accessibilityRole="button"
                 accessibilityLabel={`Ver detalle de ${item.nombre}`}
                 onPress={() =>
@@ -184,8 +185,7 @@ export default function PerfilFavoritosScreen() {
                   })
                 }
                 style={styles.cardOpen}
-              > 
-              
+              >
                 <Image
                   source={
                     item.imagenes[0]

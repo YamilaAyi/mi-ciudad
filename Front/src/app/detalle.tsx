@@ -1,18 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
+
 import {
   Image,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  View, 
-  
+  View,
 } from 'react-native';
 import { obtenerUsuarioActual } from '../servicios/auth';
 import { alternarFavorito, obtenerIdsFavoritos } from '../servicios/favoritos';
-import { obtenerLugares } from '../servicios/lugares';
+import { obtenerLugares, usandoCacheLugares } from '../servicios/lugares';
 import type { Lugar } from '../tipos/entities';
 import { DatoLugar } from '../components/DatoLugar';
 
@@ -53,21 +54,55 @@ export default function DetalleScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [lugarDelServicio, setLugarDelServicio] = useState<Lugar | null>(null);
+  const [errorLugar, setErrorLugar] = useState<string | null>(null);
+const [cargandoLugar, setCargandoLugar] = useState(true);
+const [mostrandoCache, setMostrandoCache] = useState(false);
+const [intentoCarga, setIntentoCarga] = useState(0);
   const [usuarioAutenticado, setUsuarioAutenticado] = useState(false);
   const [esFavorito, setEsFavorito] = useState(false);
   const [cargandoFavorito, setCargandoFavorito] = useState(true);
   const [guardandoFavorito, setGuardandoFavorito] = useState(false);
   const [errorFavorito, setErrorFavorito] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function cargarLugar() {
-      const datos = await obtenerLugares();
-      const lugarEncontrado = datos.find((lugar) => lugar.id === id);
-      setLugarDelServicio(lugarEncontrado ?? null);
-    }
+useEffect(() => {
+  let activo = true;
 
-    cargarLugar();
-  }, [id]);
+  async function cargarLugar() {
+    setCargandoLugar(true);
+    setErrorLugar(null);
+    setLugarDelServicio(null);
+    setMostrandoCache(false);
+
+    try {
+      const datos = await obtenerLugares();
+      if (!activo) return;
+      setMostrandoCache(usandoCacheLugares);
+      console.log('¿Usando caché en Detalle?', usandoCacheLugares);
+
+      const lugarEncontrado = datos.find((lugar) => lugar.id === id);
+
+      if (lugarEncontrado) {
+        setLugarDelServicio(lugarEncontrado);
+      } else {
+        setErrorLugar('No se encontró el lugar turístico.');
+      }
+    } catch {
+      if (activo) {
+        setErrorLugar('No se pudo cargar el lugar turístico.');
+      }
+    } finally {
+      if (activo) {
+        setCargandoLugar(false);
+      }
+    }
+  }
+
+  void cargarLugar();
+
+  return () => {
+    activo = false;
+  };
+}, [id, intentoCarga]);
 
   useFocusEffect(
     useCallback(() => {
@@ -86,7 +121,7 @@ export default function DetalleScreen() {
           } else {
             setEsFavorito(false);
           }
-        } catch (favoriteError) {
+        } catch {
   if (activo) {
     setErrorFavorito(
       'No se pudieron consultar los favoritos. Comprobá tu conexión.'
@@ -103,6 +138,22 @@ export default function DetalleScreen() {
       };
     }, [id])
   );
+
+  async function abrirComoLlegar() {
+  if (!lugarDelServicio) return;
+
+  const { latitud, longitud } = lugarDelServicio.coordenadas;
+
+
+
+const url = lugarDelServicio.id === 'lug-004'
+  ? 'https://www.google.com/maps/dir/?api=1&destination=Molino%20Forclaz&destination_place_id=0x95ae327819875ab1:0xfd660d33f693a1cc&travelmode=driving'
+  : `https://www.google.com/maps/dir/?api=1&destination=${latitud},${longitud}&travelmode=driving`;
+
+
+
+  await Linking.openURL(url);
+}
 
   async function handleAlternarFavorito() {
     if (!usuarioAutenticado) {
@@ -135,6 +186,59 @@ export default function DetalleScreen() {
   contentContainerStyle={styles.contenedor}
  
 >
+  {mostrandoCache && !cargandoLugar && !errorLugar && (
+  <View
+    style={{
+      backgroundColor: '#FFF8E1',
+      padding: 12,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: '#F5E6B3',
+    }}
+  >
+    <Text style={{ color: '#664D03' }}>
+      Estás viendo información guardada.
+      Algunos datos podrían no estar actualizados.
+    </Text>
+
+    <Pressable
+  onPress={() => setIntentoCarga((anterior) => anterior + 1)}
+  style={styles.botonComoLlegar}
+>
+  <Text style={styles.textoComoLlegar}>
+    Reintentar conexión
+  </Text>
+</Pressable>
+  </View>
+)}
+  {cargandoLugar && (
+  <Text style={{ textAlign: 'center', marginTop: 20 }}>
+    Cargando información del lugar...
+  </Text>
+)}
+
+{errorLugar && (
+  <View style={{ alignItems: 'center', marginTop: 20 }}>
+    <Ionicons
+      name="alert-circle-outline"
+      size={48}
+      color="#C62828"
+    />
+
+    <Text style={{ color: '#C62828', marginTop: 10 }}>
+      {errorLugar}
+    </Text>
+
+    <Pressable
+  onPress={() => setIntentoCarga((anterior) => anterior + 1)}
+  style={styles.botonComoLlegar}
+>
+  <Text style={styles.textoComoLlegar}>
+    Reintentar
+  </Text>
+</Pressable>
+  </View>
+)}
 {lugarDelServicio && (
   lugarDelServicio.imagenes?.[0] ? (
     <Image
@@ -148,10 +252,11 @@ export default function DetalleScreen() {
     </View>
   )
 )}
- <Text style={styles.nombreLugar}>
-   {lugarDelServicio?.nombre ?? 'Cargando lugar...'}
- </Text>
-
+ {lugarDelServicio && (
+  <Text style={styles.nombreLugar}>
+    {lugarDelServicio.nombre}
+  </Text>
+)}
  {lugarDelServicio && (
    <View>
      <Pressable
@@ -254,6 +359,23 @@ export default function DetalleScreen() {
   valor={lugarDelServicio?.sitioWeb ?? null}
 />
 
+{lugarDelServicio && (
+  <Pressable
+    style={styles.botonComoLlegar}
+    onPress={() => void abrirComoLlegar()}
+    accessibilityRole="button"
+    accessibilityLabel="Cómo llegar"
+  >
+    <Ionicons
+      name="navigate-outline"
+      size={24}
+      color="#FFFFFF"
+    />
+    <Text style={styles.textoComoLlegar}>
+      Cómo llegar
+    </Text>
+  </Pressable>
+)}
 
     </ScrollView>
   );
@@ -280,6 +402,23 @@ const styles = StyleSheet.create({
     color: '#B91C1C',
     fontSize: 14,
   },
+
+  botonComoLlegar: {
+  backgroundColor: '#176B87',
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 10,
+  padding: 15,
+  borderRadius: 12,
+  marginTop: 15,
+},
+
+textoComoLlegar: {
+  color: '#FFFFFF',
+  fontSize: 17,
+  fontWeight: 'bold',
+},
   imagenLugar: {
     width: '100%',
     height: 220,

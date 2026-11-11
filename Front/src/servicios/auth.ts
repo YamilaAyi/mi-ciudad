@@ -3,12 +3,16 @@ import { Platform } from 'react-native';
 import type { Usuario } from '../tipos/entities';
 import { apiRequest, ApiError } from './api';
 import {
+  borrarTokenRecordado,
   borrarTokenSesion,
+  guardarTokenRecordado,
   guardarTokenSesion,
+  obtenerTokenRecordado,
   obtenerTokenSesion,
 } from './almacen-sesion';
 import { borrarCache, guardarCache, leerCache } from './baseLocal';
 
+// Maneja el ingreso y la sesión local; la contraseña nunca se guarda en el dispositivo.
 interface RespuestaUno<T> {
   datos: T;
   meta: null;
@@ -56,6 +60,8 @@ export async function ingresar(email: string, contrasena: string): Promise<Usuar
     throw new Error('La API no devolvió los datos de la sesión.');
   }
 
+  // Un ingreso con contraseña reemplaza cualquier token que hubiera quedado para biometría.
+  await borrarTokenRecordado();
   await guardarTokenSesion(respuesta.datos.token);
   await guardarUsuarioCache(respuesta.datos.usuario);
   return respuesta.datos.usuario;
@@ -65,7 +71,9 @@ export async function obtenerEstadoBiometrico(): Promise<{
   sesionGuardada: boolean;
   disponible: boolean;
 }> {
-  const sesionGuardada = Boolean(await obtenerTokenSesion());
+  const tokenActivo = await obtenerTokenSesion();
+  const tokenRecordado = await obtenerTokenRecordado();
+  const sesionGuardada = Boolean(tokenActivo || tokenRecordado);
   if (!sesionGuardada || Platform.OS === 'web') {
     return { sesionGuardada, disponible: false };
   }
@@ -95,6 +103,16 @@ export async function ingresarConBiometria(): Promise<Usuario> {
     throw new Error('No se pudo validar la biometría. Intentá nuevamente o ingresá con email y contraseña.');
   }
 
+  // Tras validar la identidad, se restaura el token recordado para recuperar la sesión.
+  if (!(await obtenerTokenSesion())) {
+    const tokenRecordado = await obtenerTokenRecordado();
+    if (!tokenRecordado) {
+      throw new Error('La sesión guardada venció. Ingresá con email y contraseña.');
+    }
+    await guardarTokenSesion(tokenRecordado);
+    await borrarTokenRecordado();
+  }
+
   const usuario = await obtenerUsuarioActual();
   if (!usuario) {
     throw new Error('La sesión guardada venció. Ingresá con email y contraseña.');
@@ -117,6 +135,7 @@ export async function registrar(
     throw new Error('La API no devolvió los datos de la sesión.');
   }
 
+  await borrarTokenRecordado();
   await guardarTokenSesion(respuesta.datos.token);
   await guardarUsuarioCache(respuesta.datos.usuario);
   return respuesta.datos.usuario;
@@ -160,6 +179,19 @@ export async function obtenerUsuarioActual(): Promise<Usuario | null> {
 }
 
 export async function cerrarSesion(): Promise<void> {
+  const token = await obtenerTokenSesion();
+  const puedeUsarBiometria =
+    Platform.OS !== 'web' &&
+    (await LocalAuthentication.hasHardwareAsync()) &&
+    (await LocalAuthentication.isEnrolledAsync());
+
+  // Se conserva solo el token seguro para el próximo ingreso biométrico, no la contraseña.
+  if (token && puedeUsarBiometria) {
+    await guardarTokenRecordado(token);
+  } else {
+    await borrarTokenRecordado();
+  }
+
   await borrarTokenSesion();
   await borrarCache('usuarioId');
   await borrarCache('usuarioPerfil');

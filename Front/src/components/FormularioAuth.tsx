@@ -45,6 +45,7 @@ export function FormularioAuth({ modo }: { modo: ModoAuth }) {
         setSesionGuardada(estado.sesionGuardada);
         setBiometriaDisponible(estado.disponible);
 
+        // Si hay un token y biometría configurada, solicitarla al abrir el inicio de sesión.
         if (estado.disponible && !promptBiometricoIniciado.current) {
           promptBiometricoIniciado.current = true;
           setCargando(true);
@@ -134,7 +135,7 @@ export function FormularioAuth({ modo }: { modo: ModoAuth }) {
           <Text style={styles.description}>
             {esRegistro
               ? 'Registrate para guardar tus lugares favoritos.'
-              : 'Ingresá para ver y guardar tus lugares favoritos.'}
+              : 'Ingresá para ver y guardar tus lugares favoritos. En próximos ingresos podés usar la huella o el rostro si tenés biometría configurada.'}
           </Text>
 
           {esRegistro && (

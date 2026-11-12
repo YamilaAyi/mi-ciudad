@@ -23,7 +23,8 @@ bloquear para volver a ingresar con huella o rostro cuando el dispositivo tenga 
 configurada; si no, se usa email y contraseña. El token permanece en `expo-secure-store`;
 los datos simples de sesión y caché usan `expo-sqlite/kv-store`. Los favoritos se guardan en
 tablas SQLite y los cambios hechos sin conexión quedan pendientes hasta que la API vuelva a
-estar disponible.
+estar disponible. La app muestra un aviso global cuando el dispositivo pierde conexión a
+internet.
 
 In the output, you'll find options to open the app in a
 

@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -103,6 +104,7 @@ function Dato({
     </View>
   );
 }
+
 
 export default function DetalleEventoScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -335,7 +337,17 @@ export default function DetalleEventoScreen() {
         : nombreLugar
       : 'Ubicación a confirmar');
 
+  const imagenEvento =
+    lugar?.imagenes?.find((url) => url?.trim()) ||
+    evento.imagenUrl?.trim() ||
+    null;
+
   const colorEstado = COLORES_ESTADO[evento.estado] || '#777777';
+
+  // El estado ya se muestra en la etiqueta; evitar repetirlo en la descripción.
+  const descripcionEvento = evento.descripcion
+    .replace(/\s*(?:cancelad[oa]|suspendid[oa]|programad[oa]|finalizad[oa])\.?\s*$/i, '')
+    .trim();
 
   return (
     <View style={styles.pantalla}>
@@ -344,9 +356,9 @@ export default function DetalleEventoScreen() {
         contentContainerStyle={styles.contenido}
         showsVerticalScrollIndicator={false}
       >
-        {evento.imagenUrl ? (
+        {imagenEvento ? (
           <Image
-            source={{ uri: evento.imagenUrl }}
+            source={{ uri: imagenEvento }}
             style={styles.imagen}
             resizeMode="cover"
           />
@@ -372,9 +384,9 @@ export default function DetalleEventoScreen() {
 
           <Text style={styles.titulo}>{evento.titulo}</Text>
 
-          {!!evento.descripcion && (
+          {!!descripcionEvento && (
             <Text style={styles.descripcion}>
-              {evento.descripcion}
+              {descripcionEvento}
             </Text>
           )}
         </View>
@@ -413,6 +425,67 @@ export default function DetalleEventoScreen() {
             />
           </View>
         </View>
+
+
+        {lugar && (
+          <View style={styles.seccionLugar}>
+            <Text style={styles.tituloLugar}>Sobre el lugar</Text>
+
+            {!!lugar.descripcionCorta?.trim() && (
+              <Text style={styles.descripcionLugar} numberOfLines={2}>
+                {lugar.descripcionCorta}
+              </Text>
+            )}
+
+            <View style={styles.filaExtrasLugar}>
+              <View
+                style={[
+                  styles.etiquetaAccesibilidad,
+                  !lugar.accesible && styles.etiquetaSinAccesibilidad,
+                ]}
+              >
+                <Ionicons
+                  name="accessibility-outline"
+                  size={16}
+                  color={lugar.accesible ? '#21865B' : '#7B858A'}
+                />
+                <Text
+                  style={[
+                    styles.textoAccesibilidad,
+                    !lugar.accesible && styles.textoSinAccesibilidad,
+                  ]}
+                >
+                  {lugar.accesible ? 'Accesible' : 'Sin accesibilidad'}
+                </Text>
+              </View>
+
+              {!!lugar.telefono && (
+                <Pressable
+                  style={styles.enlaceWebLugar}
+                  onPress={() => Linking.openURL(`tel:${lugar.telefono}`)}
+                >
+                  <Ionicons name="call-outline" size={16} color={AZUL} />
+                  <Text style={styles.textoWebLugar}>Teléfono</Text>
+                </Pressable>
+              )}
+
+              {!!lugar.sitioWeb && (
+                <Pressable
+                  style={styles.enlaceWebLugar}
+                  onPress={() => {
+                    const url = /^https?:\/\//i.test(lugar.sitioWeb!)
+                      ? lugar.sitioWeb!
+                      : `https://${lugar.sitioWeb}`;
+                    Linking.openURL(url);
+                  }}
+                >
+                  <Ionicons name="globe-outline" size={16} color={AZUL} />
+                  <Text style={styles.textoWebLugar}>Más información</Text>
+                </Pressable>
+              )}
+            </View>
+          </View>
+        )}
 
         {esAdmin &&
           (evento.estado === 'programado' ||
@@ -501,42 +574,47 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contenido: {
-    padding: 17,
-    paddingBottom: 15,
+    paddingHorizontal: 18,
+    paddingTop: 20,
+    paddingBottom: 30,
   },
   imagen: {
     width: '100%',
-    height: 135,
-    borderRadius: 16,
-    marginBottom: 13,
+    height: 185,
+    borderRadius: 22,
+    marginBottom: 19,
     backgroundColor: '#E5ECEF',
   },
   imagenAlternativa: {
-    height: 100,
-    borderRadius: 16,
-    backgroundColor: '#E7F1F4',
+    height: 155,
+    borderRadius: 22,
+    backgroundColor: '#E3F0F3',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 13,
-    gap: 5,
+    marginBottom: 19,
+    gap: 9,
+    borderWidth: 1,
+    borderColor: '#D5E6EB',
   },
   textoImagenAlternativa: {
-    color: AZUL,
-    fontSize: 12,
-    fontWeight: '700',
+    color: '#176B87',
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.3,
   },
   encabezado: {
-    marginBottom: 14,
+    marginBottom: 21,
+    paddingHorizontal: 2,
   },
   estado: {
     alignSelf: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    gap: 7,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderRadius: 20,
-    marginBottom: 8,
+    marginBottom: 12,
   },
   punto: {
     width: 7,
@@ -548,73 +626,74 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   titulo: {
-    color: '#203D49',
-    fontSize: 23,
-    lineHeight: 28,
+    color: '#183B49',
+    fontSize: 27,
+    lineHeight: 33,
     fontWeight: '800',
-    letterSpacing: -0.5,
+    letterSpacing: -0.7,
   },
   descripcion: {
     color: '#71818A',
-    fontSize: 13,
-    lineHeight: 19,
-    marginTop: 6,
+    fontSize: 14,
+    lineHeight: 22,
+    marginTop: 8,
   },
   seccion: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 14,
+    borderRadius: 22,
+    padding: 18,
     borderWidth: 1,
-    borderColor: '#E5EAED',
+    borderColor: '#E5ECEF',
     shadowColor: '#183B49',
-    shadowOpacity: 0.04,
-    shadowRadius: 7,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
+    shadowOpacity: 0.055,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
   },
   tituloSeccion: {
-    color: '#234653',
-    fontSize: 15,
+    color: '#183B49',
+    fontSize: 17,
     fontWeight: '800',
-    marginBottom: 12,
+    marginBottom: 19,
   },
   grilla: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    columnGap: 10,
-    rowGap: 13,
+    columnGap: 12,
+    rowGap: 20,
   },
   dato: {
-    width: '48%',
+    width: '47%',
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 8,
+    gap: 9,
   },
   datoCompleto: {
     width: '100%',
   },
   iconoDato: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: '#EAF3F5',
+    width: 37,
+    height: 37,
+    borderRadius: 12,
+    backgroundColor: '#E8F2F4',
     alignItems: 'center',
     justifyContent: 'center',
   },
   textosDato: {
     flex: 1,
-    paddingTop: 1,
+    paddingTop: 2,
   },
   etiqueta: {
     color: '#849198',
-    fontSize: 10,
-    marginBottom: 3,
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: 5,
   },
   valor: {
-    color: '#344A53',
-    fontSize: 12,
-    lineHeight: 17,
-    fontWeight: '600',
+    color: '#29434E',
+    fontSize: 13,
+    lineHeight: 19,
+    fontWeight: '700',
   },
   pieFijo: {
     backgroundColor: '#FFFFFF',
@@ -683,6 +762,66 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 
+  seccionLugar: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 16,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#E5ECEF',
+  },
+  tituloLugar: {
+    color: '#183B49',
+    fontSize: 16,
+    fontWeight: '800',
+    marginBottom: 7,
+  },
+  descripcionLugar: {
+    color: '#71818A',
+    fontSize: 13,
+    lineHeight: 19,
+    marginBottom: 12,
+  },
+  filaExtrasLugar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 7,
+  },
+  etiquetaAccesibilidad: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#EAF5EF',
+    paddingHorizontal: 9,
+    paddingVertical: 7,
+    borderRadius: 20,
+  },
+  etiquetaSinAccesibilidad: {
+    backgroundColor: '#F0F2F3',
+  },
+  textoAccesibilidad: {
+    color: '#21865B',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  textoSinAccesibilidad: {
+    color: '#7B858A',
+  },
+  enlaceWebLugar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 7,
+    borderRadius: 20,
+    backgroundColor: '#EAF2F6',
+  },
+  textoWebLugar: {
+    color: AZUL,
+    fontSize: 11,
+    fontWeight: '700',
+  },
   adminSection: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,

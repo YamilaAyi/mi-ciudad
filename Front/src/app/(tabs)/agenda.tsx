@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
 import {
   ActivityIndicator,
   Image,
@@ -217,6 +217,7 @@ function TarjetaEvento({
 
 export default function AgendaScreen() {
   const router = useRouter();
+  const scrollRef = useRef<ScrollView>(null);
 
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [lugares, setLugares] = useState<Lugar[]>([]);
@@ -258,11 +259,18 @@ export default function AgendaScreen() {
     cargarEventos();
   }, [cargarEventos]);
 
+  useFocusEffect(
+    useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+    }, [])
+  );
+
   const grupos = agruparEventos(eventos);
 
   return (
     <View style={styles.contenedor}>
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={styles.contenido}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -276,8 +284,8 @@ export default function AgendaScreen() {
       >
         <View style={styles.encabezado}>
           <View style={styles.etiquetaEncabezado}>
-            <View style={styles.puntoEncabezado} />
-            <Text style={styles.textoEtiqueta}>DESCUBRÍ COLÓN</Text>
+            <Ionicons name="compass-outline" size={16} color="#218C80" />
+            <Text style={styles.textoEtiqueta}>DESCUBRÍ COLÓN · ENTRE RÍOS</Text>
           </View>
 
           <Text style={styles.titulo}>Agenda de eventos</Text>
@@ -400,17 +408,21 @@ const styles = StyleSheet.create({
   },
   contenido: {
     paddingHorizontal: 19,
-    paddingTop: 22,
+    paddingTop: 34,
     paddingBottom: 38,
   },
   encabezado: {
-    marginBottom: 28,
+    backgroundColor: 'transparent',
+    paddingHorizontal: 2,
+    paddingVertical: 5,
+    marginBottom: 25,
   },
   etiquetaEncabezado: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7,
-    marginBottom: 10,
+    gap: 8,
+    marginTop: 8,
+    marginBottom: 4,
   },
   puntoEncabezado: {
     width: 7,
@@ -419,22 +431,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#35A995',
   },
   textoEtiqueta: {
-    color: '#35A995',
+    color: '#218C80',
     fontSize: 11,
     fontWeight: '800',
-    letterSpacing: 1.5,
+    letterSpacing: 1.3,
   },
   titulo: {
-    color: '#183B49',
-    fontSize: 29,
+    color: '#173B49',
+    fontSize: 32,
     fontWeight: '800',
-    letterSpacing: -0.8,
+    letterSpacing: -1.1,
   },
   subtitulo: {
-    color: '#71818A',
+    color: '#77868D',
     fontSize: 14,
     lineHeight: 21,
-    marginTop: 8,
+    marginTop: 9,
     maxWidth: 330,
   },
   resumen: {
@@ -442,8 +454,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'flex-start',
     backgroundColor: '#E8F2F4',
-    borderRadius: 13,
-    paddingVertical: 10,
+    borderRadius: 14,
+    paddingVertical: 9,
     paddingHorizontal: 12,
     marginTop: 19,
     gap: 10,
@@ -467,10 +479,10 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   listaAgenda: {
-    gap: 25,
+    gap: 29,
   },
   grupoFecha: {
-    gap: 13,
+    gap: 14,
   },
   encabezadoFecha: {
     flexDirection: 'row',
@@ -478,14 +490,19 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   fechaCalendario: {
-    width: 53,
-    height: 57,
+    width: 55,
+    height: 59,
     backgroundColor: '#FFFFFF',
-    borderRadius: 13,
+    borderRadius: 15,
     borderWidth: 1,
-    borderColor: '#E2E9EC',
+    borderColor: '#E3EAED',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#183B49',
+    shadowOpacity: 0.035,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
   },
   numeroDia: {
     color: '#183B49',
@@ -515,9 +532,9 @@ const styles = StyleSheet.create({
     textTransform: 'capitalize',
   },
   contadorFecha: {
-    minWidth: 27,
-    height: 27,
-    paddingHorizontal: 7,
+    minWidth: 28,
+    height: 28,
+    paddingHorizontal: 8,
     borderRadius: 14,
     backgroundColor: '#E5EFF2',
     alignItems: 'center',
@@ -540,23 +557,25 @@ const styles = StyleSheet.create({
   },
   tarjeta: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 17,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#E7ECEF',
+    borderColor: '#E8EEF0',
     overflow: 'hidden',
     shadowColor: '#183B49',
-    shadowOpacity: 0.055,
-    shadowRadius: 9,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 2,
+    shadowOpacity: 0.07,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
   },
   imagenEvento: {
     width: '100%',
-    height: 155,
+    height: 140,
     backgroundColor: '#E5ECEF',
   },
   contenidoTarjeta: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 15,
+    paddingBottom: 16,
   },
   filaSuperior: {
     flexDirection: 'row',
@@ -598,23 +617,23 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   tituloEvento: {
-    color: '#203D49',
-    fontSize: 18,
-    lineHeight: 24,
+    color: '#193B49',
+    fontSize: 19,
+    lineHeight: 25,
     fontWeight: '800',
-    letterSpacing: -0.3,
+    letterSpacing: -0.45,
   },
   descripcion: {
     color: '#71818A',
     fontSize: 13,
-    lineHeight: 19,
-    marginTop: 6,
+    lineHeight: 20,
+    marginTop: 7,
   },
   separador: {
     height: 1,
     backgroundColor: '#EDF1F3',
-    marginTop: 14,
-    marginBottom: 12,
+    marginTop: 15,
+    marginBottom: 13,
   },
   filaDatos: {
     flexDirection: 'row',

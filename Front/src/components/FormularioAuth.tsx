@@ -18,6 +18,7 @@ import {
   obtenerEstadoBiometrico,
   registrar,
 } from '../servicios/auth';
+import { registrarDispositivoPush } from '../servicios/notificaciones-push';
 
 type ModoAuth = 'ingreso' | 'registro';
 
@@ -38,6 +39,7 @@ export function FormularioAuth({ modo }: { modo: ModoAuth }) {
   useEffect(() => {
     if (esRegistro) return;
     let activo = true;
+
     async function comprobarSesion() {
       try {
         const estado = await obtenerEstadoBiometrico();
@@ -51,6 +53,7 @@ export function FormularioAuth({ modo }: { modo: ModoAuth }) {
           setError(null);
           try {
             await ingresarConBiometria();
+            await registrarDispositivoPush();
             if (activo) router.replace('/(tabs)/perfil');
           } catch (biometricError) {
             if (activo) {
@@ -96,7 +99,10 @@ export function FormularioAuth({ modo }: { modo: ModoAuth }) {
       } else {
         await ingresar(email, contrasena);
       }
+
+      await registrarDispositivoPush();
       router.replace('/(tabs)/perfil');
+
     } catch (submitError) {
       setError(
         submitError instanceof Error

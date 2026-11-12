@@ -164,3 +164,52 @@ export async function cerrarSesion(): Promise<void> {
   await borrarCache('usuarioId');
   await borrarCache('usuarioPerfil');
 }
+
+/**
+ * Lee el rol incluido en el token de sesión.
+ * Se utiliza únicamente para mostrar u ocultar controles.
+ * La autorización real siempre la valida la API.
+ */
+function decodificarPayloadJWT(valor: string): string | null {
+  const alfabeto = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  const base64 = valor.replace(/-/g, '+').replace(/_/g, '/');
+  let salida = '';
+  let acumulador = 0;
+  let bits = 0;
+
+  for (const caracter of base64) {
+    if (caracter === '=') break;
+    const indice = alfabeto.indexOf(caracter);
+    if (indice < 0) return null;
+    acumulador = (acumulador << 6) | indice;
+    bits += 6;
+    if (bits >= 8) {
+      bits -= 8;
+      salida += String.fromCharCode((acumulador >> bits) & 255);
+    }
+  }
+  return salida;
+}
+
+export async function obtenerRolSesion(): Promise<'admin' | 'turista' | null> {
+  const token = await obtenerTokenSesion();
+  if (!token) return null;
+
+  try {
+    const segmento = token.split('.')[1];
+    if (!segmento) return null;
+    const contenido = decodificarPayloadJWT(segmento);
+    if (!contenido) return null;
+
+    const payload = JSON.parse(contenido) as { rol?: unknown };
+    const rol = payload.rol === 'admin' || payload.rol === 'turista'
+      ? payload.rol
+      : null;
+
+    console.log('[Mi Ciudad] Rol detectado:', rol);
+    return rol;
+  } catch (error) {
+    console.log('[Mi Ciudad] Error leyendo el rol:', error);
+    return null;
+  }
+}

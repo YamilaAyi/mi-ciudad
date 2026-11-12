@@ -25,8 +25,9 @@ interface Sesion {
 
 function esErrorDeConexion(error: unknown): boolean {
   return (
-    error instanceof Error &&
-    error.message.startsWith('No se pudo conectar con la API')
+    (error instanceof ApiError && error.codigo === 'SIN_CONEXION') ||
+    (error instanceof Error &&
+      error.message.startsWith('No se pudo conectar con la API'))
   );
 }
 

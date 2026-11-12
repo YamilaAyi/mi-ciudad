@@ -50,6 +50,13 @@ function formatearHorarios(horarios: Lugar['horarios']): string | null {
     .join('\n');
 }
 
+function formatearDuracion(segundos: number): string {
+  const minutos = Math.floor(segundos / 60);
+  const segundosRestantes = segundos % 60;
+
+  return `${minutos}:${String(segundosRestantes).padStart(2, '0')} min`;
+}
+
 export default function DetalleScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -360,6 +367,89 @@ const url = lugarDelServicio.id === 'lug-004'
 />
 
 {lugarDelServicio && (
+  <View style={styles.tarjetaAudioguia}>
+    <View style={styles.encabezadoAudioguia}>
+      <View style={styles.tituloAudioguia}>
+        <Ionicons
+          name="headset-outline"
+          size={20}
+          color={lugarDelServicio.audioguia ? '#176B87' : '#888888'}
+        />
+        <Text style={styles.textoTituloAudioguia}>
+          Audioguía
+        </Text>
+      </View>
+
+      <View
+        style={[
+          styles.etiquetaAudioguia,
+          lugarDelServicio.audioguia
+            ? styles.etiquetaDisponible
+            : styles.etiquetaProximamente,
+        ]}
+      >
+        <Text
+          style={[
+            styles.textoEtiquetaAudioguia,
+            lugarDelServicio.audioguia
+              ? styles.textoDisponible
+              : styles.textoProximamente,
+          ]}
+        >
+          {lugarDelServicio.audioguia ? 'Disponible' : 'Próximamente'}
+        </Text>
+      </View>
+    </View>
+
+    <Text style={styles.descripcionAudioguia}>
+      {lugarDelServicio.audioguia
+        ? 'Escuchá la historia y conocé más sobre este lugar.'
+        : 'Estamos preparando la audioguía de este lugar. ¡Muy pronto estará disponible!'}
+    </Text>
+
+    {lugarDelServicio.audioguia && (
+      <Pressable
+        style={styles.botonReproducirAudioguia}
+        onPress={() =>
+          router.push({
+            pathname: '/audioguia',
+            params: { id: lugarDelServicio.id },
+          })
+        }
+        accessibilityRole="button"
+        accessibilityLabel="Reproducir audioguía"
+      >
+        <View style={styles.iconoReproducirAudioguia}>
+          <Ionicons
+            name="play-circle-outline"
+            size={25}
+            color="#FFFFFF"
+          />
+        </View>
+
+        <View>
+          <Text style={styles.textoReproducirAudioguia}>
+            Reproducir audioguía
+          </Text>
+
+          <Text style={styles.detalleAudioguia}>
+            {lugarDelServicio.audioguia.idioma === 'es'
+              ? 'Español'
+              : lugarDelServicio.audioguia.idioma === 'en'
+                ? 'Inglés'
+                : 'Portugués'}
+            {' · '}
+            {formatearDuracion(
+              lugarDelServicio.audioguia.duracionSegundos
+            )}
+          </Text>
+        </View>
+      </Pressable>
+    )}
+  </View>
+)}
+
+{lugarDelServicio && (
   <Pressable
     style={styles.botonComoLlegar}
     onPress={() => void abrirComoLlegar()}
@@ -412,36 +502,122 @@ const styles = StyleSheet.create({
   padding: 15,
   borderRadius: 12,
   marginTop: 15,
-},
+  },
 
-textoComoLlegar: {
-  color: '#FFFFFF',
-  fontSize: 17,
-  fontWeight: 'bold',
-},
-  imagenLugar: {
-    width: '100%',
-    height: 220,
+  textoComoLlegar: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: 'bold',
+  },
+    imagenLugar: {
+      width: '100%',
+      height: 220,
+      borderRadius: 12,
+    },
+
+  contenedor: {
+    padding: 20,
+    gap: 12,
+  },
+  nombreLugar:{
+    fontSize :24,
+    fontWeight : 'bold',
+      color: '#176B87',
+  },
+  categoria : {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666666',
+  },
+  descripcion:{
+      fontSize: 16,
+    color: '#333333',
+    lineHeight: 24,
+  },
+  tarjetaAudioguia: {
+    borderWidth: 1,
+    borderColor: '#DDDDDD',
+    borderRadius: 16,
+    padding: 12,
+    gap: 12,
+    marginTop: 4,
+  },
+
+  encabezadoAudioguia: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  tituloAudioguia: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+
+  textoTituloAudioguia: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#222222',
+  },
+
+  etiquetaAudioguia: {
+    paddingHorizontal: 9,
+    paddingVertical: 4,
     borderRadius: 12,
   },
 
- contenedor: {
-  padding: 20,
-  gap: 12,
-},
-nombreLugar:{
-  fontSize :24,
-  fontWeight : 'bold',
-    color: '#176B87',
-},
-categoria : {
-  fontSize: 16,
-  fontWeight: '600',
-  color: '#666666',
-},
-descripcion:{
-    fontSize: 16,
-  color: '#333333',
-  lineHeight: 24,
-},
+  etiquetaDisponible: {
+    backgroundColor: '#D9F5E3',
+  },
+
+  etiquetaProximamente: {
+    backgroundColor: '#EEEEEE',
+  },
+
+  textoEtiquetaAudioguia: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+
+  textoDisponible: {
+    color: '#008F45',
+  },
+
+  textoProximamente: {
+    color: '#555555',
+  },
+
+  descripcionAudioguia: {
+    fontSize: 13,
+    color: '#666666',
+    lineHeight: 19,
+  },
+
+  botonReproducirAudioguia: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+
+  iconoReproducirAudioguia: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#176B87',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  textoReproducirAudioguia: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#222222',
+  },
+
+  detalleAudioguia: {
+    fontSize: 11,
+    color: '#777777',
+    marginTop: 3,
+  },
 });

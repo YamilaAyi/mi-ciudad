@@ -62,6 +62,14 @@
           "cameraPermission": "Mi Ciudad necesita la cámara para que puedas sacar una foto de tu visita.",
           "photosPermission": "Mi Ciudad necesita acceder a tus fotos para que puedas elegir una para tu visita."
         }
+      ],
+      [
+        "expo-audio",
+        {
+          "enableBackgroundPlayback": true,
+          "enableBackgroundRecording": false,
+          "recordAudioAndroid": false
+        }
       ]
     ],
     "experiments": {

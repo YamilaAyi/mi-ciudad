@@ -52,6 +52,18 @@ export default function TabLayout() {
             },
           }}
         />
+        <Stack.Screen
+          name="audioguia"
+          options={{
+            title: 'Audioguía',
+            headerShown: true,
+            headerTitleStyle: {
+              fontSize: 24,
+              fontWeight: 'bold',
+              color: '#176B87',
+            },
+          }}
+        />
 
         <Stack.Screen name="visita/[id]" options={{ title: 'Detalle de la visita' }} />
         <Stack.Screen name="registrar-visita" options={{ title: 'Registrar visita' }} />

@@ -33,6 +33,21 @@ export default function AudioguiaScreen() {
 
   const puedeReproducir = !!audioLocalUri || hayInternet;
 
+  function activarControlesPantalla() {
+    player.setActiveForLockScreen(
+      true,
+      {
+        title: lugar?.nombre ?? "Audioguía",
+        artist: "Mi Ciudad",
+        albumTitle: "Guía turística de Colón",
+      },
+      {
+        showSeekBackward: true,
+        showSeekForward: true,
+      },
+    );
+  }
+
   useEffect(() => {
     let activo = true;
 
@@ -127,6 +142,7 @@ export default function AudioguiaScreen() {
           if (urlCargada.current !== audioGuardado) {
             player.replace(audioGuardado);
             urlCargada.current = audioGuardado;
+            activarControlesPantalla();
             player.play();
           }
 
@@ -150,6 +166,7 @@ export default function AudioguiaScreen() {
           player.replace(url);
           urlCargada.current = url;
           posicionGuardada.current = 0;
+          activarControlesPantalla();
           player.play();
         }
         // Recuperación de conexión: volver a cargar y recuperar la posición.
@@ -221,10 +238,18 @@ export default function AudioguiaScreen() {
     }
   }
 
-  function alternarReproduccion() {
+  async function alternarReproduccion() {
     if (estadoAudio.playing) {
       player.pause();
     } else {
+      // Si el audio terminó, volver al principio.
+      if (
+        estadoAudio.duration > 0 &&
+        estadoAudio.currentTime >= estadoAudio.duration - 0.5
+      ) {
+        await player.seekTo(0);
+      }
+
       player.play();
     }
   }

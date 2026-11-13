@@ -5,7 +5,6 @@ import {
   ActivityIndicator,
   Alert,
   Image,
-  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -132,8 +131,9 @@ export default function DetalleEventoScreen() {
         const resultado = await obtenerEvento(String(id));
         if (!activo) return;
         setEvento(resultado);
+        setLugar(null);
 
-        if (!resultado.direccionLibre?.trim() && resultado.lugarId) {
+        if (resultado.lugarId?.trim()) {
           try {
             const catalogo = await obtenerLugares();
             if (activo) {
@@ -417,75 +417,53 @@ export default function DetalleEventoScreen() {
               etiqueta="Entrada"
               valor={formatearPrecio(evento.precio)}
             />
-            <Dato
-              icono="location-outline"
-              etiqueta="Ubicación"
-              valor={ubicacion}
-              anchoCompleto
-            />
+            {lugar ? (
+              <Pressable
+                style={styles.tarjetaLugarEnlace}
+                onPress={() =>
+                  router.push({
+                    pathname: '/detalle',
+                    params: { id: lugar.id.toString() },
+                  })
+                }
+                accessibilityRole="button"
+                accessibilityLabel={`Ver ficha de ${nombreLugar || 'este lugar'}`}
+              >
+                <View style={styles.iconoLugarEnlace}>
+                  <Ionicons name="location" size={23} color={AZUL} />
+                </View>
+
+                <View style={styles.contenidoLugarEnlace}>
+                  <Text style={styles.etiqueta}>Ubicación</Text>
+                  <Text style={styles.nombreLugarEnlace}>
+                    {nombreLugar || 'Lugar asociado'}
+                  </Text>
+
+                  {!!direccionLugar && (
+                    <Text style={styles.direccionLugarEnlace}>
+                      {direccionLugar}
+                    </Text>
+                  )}
+
+                  <View style={styles.accionFichaLugar}>
+                    <Text style={styles.textoAccionFichaLugar}>
+                      VER FICHA DEL LUGAR
+                    </Text>
+                    <Ionicons name="arrow-forward-circle" size={19} color={AZUL} />
+                  </View>
+                </View>
+              </Pressable>
+            ) : (
+              <Dato
+                icono="location-outline"
+                etiqueta="Ubicación"
+                valor={ubicacion}
+                anchoCompleto
+              />
+            )}
           </View>
         </View>
 
-
-        {lugar && (
-          <View style={styles.seccionLugar}>
-            <Text style={styles.tituloLugar}>Sobre el lugar</Text>
-
-            {!!lugar.descripcionCorta?.trim() && (
-              <Text style={styles.descripcionLugar} numberOfLines={2}>
-                {lugar.descripcionCorta}
-              </Text>
-            )}
-
-            <View style={styles.filaExtrasLugar}>
-              <View
-                style={[
-                  styles.etiquetaAccesibilidad,
-                  !lugar.accesible && styles.etiquetaSinAccesibilidad,
-                ]}
-              >
-                <Ionicons
-                  name="accessibility-outline"
-                  size={16}
-                  color={lugar.accesible ? '#21865B' : '#7B858A'}
-                />
-                <Text
-                  style={[
-                    styles.textoAccesibilidad,
-                    !lugar.accesible && styles.textoSinAccesibilidad,
-                  ]}
-                >
-                  {lugar.accesible ? 'Accesible' : 'Sin accesibilidad'}
-                </Text>
-              </View>
-
-              {!!lugar.telefono && (
-                <Pressable
-                  style={styles.enlaceWebLugar}
-                  onPress={() => Linking.openURL(`tel:${lugar.telefono}`)}
-                >
-                  <Ionicons name="call-outline" size={16} color={AZUL} />
-                  <Text style={styles.textoWebLugar}>Teléfono</Text>
-                </Pressable>
-              )}
-
-              {!!lugar.sitioWeb && (
-                <Pressable
-                  style={styles.enlaceWebLugar}
-                  onPress={() => {
-                    const url = /^https?:\/\//i.test(lugar.sitioWeb!)
-                      ? lugar.sitioWeb!
-                      : `https://${lugar.sitioWeb}`;
-                    Linking.openURL(url);
-                  }}
-                >
-                  <Ionicons name="globe-outline" size={16} color={AZUL} />
-                  <Text style={styles.textoWebLugar}>Más información</Text>
-                </Pressable>
-              )}
-            </View>
-          </View>
-        )}
 
         {esAdmin &&
           (evento.estado === 'programado' ||
@@ -671,6 +649,52 @@ const styles = StyleSheet.create({
   datoCompleto: {
     width: '100%',
   },
+  tarjetaLugarEnlace: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    borderRadius: 16,
+    backgroundColor: '#EAF4F7',
+    borderWidth: 1,
+    borderColor: '#CFE2E9',
+  },
+  iconoLugarEnlace: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  contenidoLugarEnlace: {
+    flex: 1,
+  },
+  nombreLugarEnlace: {
+    color: '#183B49',
+    fontSize: 16,
+    lineHeight: 21,
+    fontWeight: '800',
+  },
+  direccionLugarEnlace: {
+    color: '#657B85',
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 3,
+  },
+  accionFichaLugar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 9,
+  },
+  textoAccionFichaLugar: {
+    color: AZUL,
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.4,
+  },
   iconoDato: {
     width: 37,
     height: 37,
@@ -762,66 +786,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 
-  seccionLugar: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 16,
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: '#E5ECEF',
-  },
-  tituloLugar: {
-    color: '#183B49',
-    fontSize: 16,
-    fontWeight: '800',
-    marginBottom: 7,
-  },
-  descripcionLugar: {
-    color: '#71818A',
-    fontSize: 13,
-    lineHeight: 19,
-    marginBottom: 12,
-  },
-  filaExtrasLugar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 7,
-  },
-  etiquetaAccesibilidad: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: '#EAF5EF',
-    paddingHorizontal: 9,
-    paddingVertical: 7,
-    borderRadius: 20,
-  },
-  etiquetaSinAccesibilidad: {
-    backgroundColor: '#F0F2F3',
-  },
-  textoAccesibilidad: {
-    color: '#21865B',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  textoSinAccesibilidad: {
-    color: '#7B858A',
-  },
-  enlaceWebLugar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 9,
-    paddingVertical: 7,
-    borderRadius: 20,
-    backgroundColor: '#EAF2F6',
-  },
-  textoWebLugar: {
-    color: AZUL,
-    fontSize: 11,
-    fontWeight: '700',
-  },
   adminSection: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,

@@ -4,6 +4,8 @@ import { ErrorApi, pedir } from './cliente';
 import { subirFoto } from './fotos';
 import { asegurarSesion, obtenerUsuarioId } from './sesion';
 
+export let usandoCacheVisitas = false;
+
 interface FilaVisita {
   id: string;
   usuarioId: string;
@@ -67,7 +69,7 @@ async function sincronizar(usuarioId: string): Promise<void> {
       await base.runAsync('UPDATE visitas SET sincronizada = 1 WHERE id = ?', [fila.id]);
     } catch (e) {
       console.log('No se pudo subir la visita pendiente', fila.id, '->', e);
-      if (esSinConexion(e)) return; // sin señal: lo intentamos la próxima vez
+      if (esSinConexion(e)) throw e; // sin señal: lo intentamos la próxima vez
       // otro error: la dejamos pendiente y seguimos con las demás
     }
   }
@@ -108,9 +110,11 @@ export async function obtenerVisitas(): Promise<Visita[]> {
 
   try {
     await sincronizar(usuarioId);
+    usandoCacheVisitas = false;
   } catch (e) {
     console.log('No se pudo sincronizar:', e);
     // sin conexión u otro problema: mostramos lo que hay guardado en el teléfono
+    usandoCacheVisitas = true;
   }
 
   const base = await abrirBase();
@@ -178,5 +182,16 @@ export async function registrarVisita(datos: {
     }
     // Sin conexión, sesión vencida o error del servidor: queda guardada y se sube después.
     return nueva;
+  }
+}
+
+// Ids de los lugares que la persona ya visitó. Si no se puede saber (sin sesión o sin
+// datos), devuelve null y las pantallas simplemente no muestran el indicador.
+export async function obtenerIdsVisitados(): Promise<Set<string> | null> {
+  try {
+    const visitas = await obtenerVisitas();
+    return new Set(visitas.map((v) => v.lugarId));
+  } catch {
+    return null;
   }
 }

@@ -151,6 +151,24 @@ export default function PerfilFavoritosScreen() {
         </TouchableOpacity>
       </View>
 
+      <TouchableOpacity
+        style={styles.eventosButton}
+        onPress={() => router.push('/mis-eventos')}
+        accessibilityRole="button"
+        accessibilityLabel="Ver mis eventos guardados"
+      >
+        <View style={styles.eventosIcono}>
+          <Ionicons name="calendar-outline" size={23} color="#176B87" />
+        </View>
+        <View style={styles.eventosInfo}>
+          <Text style={styles.eventosTitulo}>Mis eventos</Text>
+          <Text style={styles.eventosSubtitulo}>
+            Consultá las actividades que guardaste.
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={21} color="#176B87" />
+      </TouchableOpacity>
+
       {error && (
         <View style={styles.errorBox}>
           <Text style={styles.errorText}>{error}</Text>
@@ -209,7 +227,7 @@ export default function PerfilFavoritosScreen() {
                 <Ionicons name="heart" size={22} color="#E53935" />
               </TouchableOpacity>
             </View>
-            )}
+          )}
         />
       )}
     </View>
@@ -239,7 +257,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     padding: 14,
     borderRadius: 14,
-    marginBottom: 20,
+    marginBottom: 14,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     gap: 12,
@@ -256,6 +274,28 @@ const styles = StyleSheet.create({
   userName: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
   userEmail: { fontSize: 14, color: '#64748B' },
   logoutBtn: { padding: 8 },
+  eventosButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 14,
+    marginBottom: 20,
+    gap: 12,
+  },
+  eventosIcono: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#E7F3F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  eventosInfo: { flex: 1 },
+  eventosTitulo: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
+  eventosSubtitulo: { fontSize: 13, color: '#64748B', marginTop: 3 },
   card: {
     flexDirection: 'row',
     alignItems: 'center',

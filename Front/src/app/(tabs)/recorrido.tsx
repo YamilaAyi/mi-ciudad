@@ -1,10 +1,14 @@
+import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import AvisoDatosGuardados from '../../components/AvisoDatosGuardados';
+import EtiquetaVisita from '../../components/EtiquetaVisita';
 import FotoVisita from '../../components/FotoVisita';
+import ResumenProgreso from '../../components/ResumenProgreso';
 import { ErrorApi } from '../../servicios/cliente';
-import { obtenerLugares } from '../../servicios/lugares';
-import { obtenerVisitas } from '../../servicios/visitas';
+import { obtenerLugares, usandoCacheLugares } from '../../servicios/lugares';
+import { obtenerVisitas, usandoCacheVisitas } from '../../servicios/visitas';
 import type { Lugar, Visita } from '../../tipos/entities';
 import { formatearFecha } from '../../utilidades/fechas';
 
@@ -23,14 +27,20 @@ export default function RecorridoScreen() {
   const [error, setError] = useState<string | null>(null);
   const [sinSesion, setSinSesion] = useState(false);
   const [lugaresFallaron, setLugaresFallaron] = useState(false);
+  const [mostrandoGuardado, setMostrandoGuardado] = useState(false);
+  const [refrescando, setRefrescando] = useState(false);
 
   const cargar = useCallback(async (conIndicador: boolean) => {
     if (conIndicador) setCargando(true);
     setError(null);
     setSinSesion(false);
     setLugaresFallaron(false);
+    setMostrandoGuardado(false);
+
+    let visitasCargadas = false;
     try {
       setVisitas(await obtenerVisitas());
+      visitasCargadas = true;
     } catch (e) {
       setVisitas([]);
       if (e instanceof ErrorApi && e.codigo === 'NO_AUTENTICADO') {
@@ -39,12 +49,20 @@ export default function RecorridoScreen() {
         setError(mensajeDeError(e));
       }
     }
+
+    let lugaresCargados = false;
     try {
       setLugares(await obtenerLugares());
+      lugaresCargados = true;
     } catch {
       // sin conexión y sin catálogo guardado: se ven las visitas, sin el nombre del lugar
       setLugaresFallaron(true);
     }
+
+    // Aviso: lo que se está viendo viene de la copia guardada en el teléfono.
+    setMostrandoGuardado(
+      (visitasCargadas && usandoCacheVisitas) || (lugaresCargados && usandoCacheLugares)
+    );
     setCargando(false);
   }, []);
 
@@ -55,6 +73,13 @@ export default function RecorridoScreen() {
     }, [cargar])
   );
 
+  // Deslizar la lista hacia abajo para actualizar y sincronizar.
+  async function alDeslizar() {
+    setRefrescando(true);
+    await cargar(false);
+    setRefrescando(false);
+  }
+
   // Más recientes primero
   const visitasOrdenadas = [...visitas].sort(
     (a, b) => new Date(b.fechaHora).getTime() - new Date(a.fechaHora).getTime()
@@ -62,7 +87,13 @@ export default function RecorridoScreen() {
 
   // Lugares activos que todavía no tienen ninguna visita (sin sesión no se puede saber)
   const idsVisitados = new Set(visitas.map((v) => v.lugarId));
-  const pendientes = sinSesion ? [] : lugares.filter((l) => l.activo && !idsVisitados.has(l.id));
+  const lugaresActivos = lugares.filter((l) => l.activo);
+  const pendientes = sinSesion ? [] : lugaresActivos.filter((l) => !idsVisitados.has(l.id));
+
+  // Para el resumen: cada lugar cuenta una sola vez, aunque tenga varias visitas.
+  const lugaresVisitados = lugaresActivos.filter((l) => idsVisitados.has(l.id)).length;
+  const mostrarResumen =
+    !cargando && !sinSesion && !error && !lugaresFallaron && lugaresActivos.length > 0;
 
   function nombreDelLugar(lugarId: string): string {
     return lugares.find((l) => l.id === lugarId)?.nombre ?? 'Lugar no disponible';
@@ -73,6 +104,10 @@ export default function RecorridoScreen() {
       <Text style={styles.titulo} accessibilityRole="header">
         Mi recorrido
       </Text>
+
+      {mostrarResumen && (
+        <ResumenProgreso visitados={lugaresVisitados} total={lugaresActivos.length} />
+      )}
 
       <Pressable
         style={styles.botonQr}
@@ -106,7 +141,21 @@ export default function RecorridoScreen() {
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={styles.lista}>
+      <ScrollView
+        contentContainerStyle={styles.lista}
+        refreshControl={
+          <RefreshControl
+            refreshing={refrescando}
+            onRefresh={alDeslizar}
+            colors={['#176B87']}
+            tintColor="#176B87"
+          />
+        }
+      >
+        {!cargando && !sinSesion && !error && mostrandoGuardado && (
+          <AvisoDatosGuardados onReintentar={() => cargar(true)} />
+        )}
+
         {cargando && <Text style={styles.vacio}>Cargando...</Text>}
 
         {!cargando && sinSesion && (
@@ -139,7 +188,21 @@ export default function RecorridoScreen() {
         )}
 
         {!cargando && !error && !sinSesion && pestania === 'visitados' && visitasOrdenadas.length === 0 && (
-          <Text style={styles.vacio}>Todavía no registraste ninguna visita.</Text>
+          <View style={styles.estadoVacio}>
+            <Ionicons name="map-outline" size={48} color="#176B87" />
+            <Text style={styles.tituloVacio}>Todavía no registraste ninguna visita</Text>
+            <Text style={styles.textoVacio}>
+              Explorá los lugares de Colón y registrá tu primera visita, con foto, nota, GPS o código
+              QR.
+            </Text>
+            <Pressable
+              style={styles.botonExplorar}
+              onPress={() => router.push('/lugares')}
+              accessibilityRole="button"
+            >
+              <Text style={styles.textoBotonExplorar}>Explorar lugares</Text>
+            </Pressable>
+          </View>
         )}
 
         {!cargando && pestania === 'visitados' &&
@@ -162,6 +225,7 @@ export default function RecorridoScreen() {
                   {nombreDelLugar(visita.lugarId)}
                 </Text>
                 <Text style={styles.detalle}>{formatearFecha(visita.fechaHora)}</Text>
+                <EtiquetaVisita visitado />
                 {!visita.sincronizada && (
                   <Text style={styles.aviso}>Pendiente de sincronizar</Text>
                 )}
@@ -207,6 +271,7 @@ export default function RecorridoScreen() {
               <Text style={styles.detalle} numberOfLines={3}>
                 {lugar.descripcionCorta}
               </Text>
+              <EtiquetaVisita visitado={false} />
 
               <Pressable
                 style={styles.botonRegistrar}
@@ -218,7 +283,7 @@ export default function RecorridoScreen() {
                 }
                 accessibilityRole="button"
               >
-                <Text style={styles.textoBotonRegistrar}>Registrar visita</Text>
+                <Text style={styles.textoBotonRegistrar}>Visitar</Text>
               </Pressable>
             </Pressable>
           ))}
@@ -390,6 +455,39 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   textoBotonReintentar: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  estadoVacio: {
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 24,
+    paddingHorizontal: 12,
+  },
+  tituloVacio: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333333',
+    textAlign: 'center',
+  },
+  textoVacio: {
+    fontSize: 16,
+    color: '#666666',
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  botonExplorar: {
+    alignSelf: 'stretch',
+    backgroundColor: '#176B87',
+    minHeight: 52,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 6,
+  },
+  textoBotonExplorar: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',

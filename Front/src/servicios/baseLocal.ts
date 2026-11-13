@@ -1,4 +1,5 @@
 import * as SQLite from 'expo-sqlite';
+import KVStore from 'expo-sqlite/kv-store';
 
 let promesaBase: Promise<SQLite.SQLiteDatabase> | null = null;
 
@@ -31,18 +32,29 @@ export function abrirBase(): Promise<SQLite.SQLiteDatabase> {
 
 export async function guardarCache(clave: string, valor: string): Promise<void> {
   const base = await abrirBase();
-  await base.runAsync('INSERT OR REPLACE INTO cache (clave, valor) VALUES (?, ?)', [clave, valor]);
+  await KVStore.setItem(clave, valor);
+  await base.runAsync('DELETE FROM cache WHERE clave = ?', [clave]);
 }
 
 export async function leerCache(clave: string): Promise<string | null> {
+  const valor = await KVStore.getItem(clave);
+  if (valor !== null) return valor;
+
   const base = await abrirBase();
   const fila = await base.getFirstAsync<{ valor: string }>(
     'SELECT valor FROM cache WHERE clave = ?',
     [clave]
   );
-  return fila?.valor ?? null;
+  if (!fila) return null;
+
+  // Migra valores guardados por versiones anteriores antes de devolverlos.
+  await KVStore.setItem(clave, fila.valor);
+  await base.runAsync('DELETE FROM cache WHERE clave = ?', [clave]);
+  return fila.valor;
 }
+
 export async function borrarCache(clave: string): Promise<void> {
+  await KVStore.removeItem(clave);
   const base = await abrirBase();
   await base.runAsync('DELETE FROM cache WHERE clave = ?', [clave]);
 }

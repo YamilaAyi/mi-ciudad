@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "223227434365",
+    "project_id": "nomadic-device-514119-e6",
+    "storage_bucket": "nomadic-device-514119-e6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:223227434365:android:8ad90748723c1f14e8e814",
+        "android_client_info": {
+          "package_name": "com.colon.miciudad.grupo70"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA4PZCQjdYLJtXyocyD2SELeTk5_epm3lE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

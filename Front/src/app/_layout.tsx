@@ -3,6 +3,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { NetworkStatusBanner } from '@/components/NetworkStatusBanner';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -69,6 +70,7 @@ export default function TabLayout() {
         <Stack.Screen name="registrar-visita" options={{ title: 'Registrar visita' }} />
         <Stack.Screen name="escanear-qr" options={{ title: 'Escanear QR' }} />
       </Stack>
+      <NetworkStatusBanner />
     </ThemeProvider>
   );
 }

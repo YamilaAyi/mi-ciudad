@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
@@ -13,8 +13,19 @@ import {
 } from 'react-native';
 
 import type { Evento, EstadoEvento, Lugar } from '../../tipos/entities';
-import { obtenerEventos } from '../../servicios/eventos';
+import AvisoDatosGuardados from '../../components/AvisoDatosGuardados';
+import { obtenerEventos, usandoCacheEventos } from '../../servicios/eventos';
 import { obtenerLugares } from '../../servicios/lugares';
+import {
+  claveFechaArgentina,
+  formatearFechaArgentina,
+  formatearDiaArgentina,
+  formatearNumeroDiaArgentina,
+  formatearMesArgentina,
+  formatearHoraArgentina,
+  finDelDiaArgentina,
+} from '../../utilidades/fechas';
+
 
 const AZUL = '#176B87';
 
@@ -58,41 +69,27 @@ function obtenerUbicacionEvento(evento: Evento, lugares: Lugar[]): string {
 }
 
 function claveFecha(fecha: string): string {
-  const date = new Date(fecha);
-  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+  return claveFechaArgentina(fecha);
 }
 
 function formatearFecha(fecha: string): string {
-  return new Date(fecha).toLocaleDateString('es-AR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  });
+  return formatearFechaArgentina(fecha);
 }
 
 function formatearDia(fecha: string): string {
-  return new Date(fecha).toLocaleDateString('es-AR', {
-    weekday: 'long',
-  });
+  return formatearDiaArgentina(fecha);
 }
 
 function formatearNumeroDia(fecha: string): string {
-  return new Date(fecha).toLocaleDateString('es-AR', {
-    day: '2-digit',
-  });
+  return formatearNumeroDiaArgentina(fecha);
 }
 
 function formatearMes(fecha: string): string {
-  return new Date(fecha).toLocaleDateString('es-AR', {
-    month: 'short',
-  }).replace('.', '');
+  return formatearMesArgentina(fecha);
 }
 
 function formatearHora(fecha: string): string {
-  return new Date(fecha).toLocaleTimeString('es-AR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return formatearHoraArgentina(fecha);
 }
 
 function formatearPrecio(precio: number | null): string {
@@ -224,6 +221,7 @@ export default function AgendaScreen() {
   const [cargando, setCargando] = useState(true);
   const [actualizando, setActualizando] = useState(false);
   const [error, setError] = useState('');
+  const [datosGuardados, setDatosGuardados] = useState(false);
 
   const cargarEventos = useCallback(async (esActualizacion = false) => {
     if (esActualizacion) {
@@ -236,7 +234,17 @@ export default function AgendaScreen() {
 
     try {
       const resultado = await obtenerEventos();
-      setEventos(resultado);
+      setDatosGuardados(usandoCacheEventos);
+
+      // Una copia guardada puede traer eventos que ya terminaron.
+      setEventos(
+        resultado.filter((evento) => {
+          const finEfectivo = evento.fin
+            ? new Date(evento.fin)
+            : finDelDiaArgentina(evento.inicio);
+          return finEfectivo !== null && finEfectivo.getTime() >= Date.now();
+        })
+      );
 
       try {
         const catalogo = await obtenerLugares();
@@ -307,6 +315,10 @@ export default function AgendaScreen() {
             </View>
           )}
         </View>
+
+        {datosGuardados && !cargando && (
+          <AvisoDatosGuardados onReintentar={() => cargarEventos()} />
+        )}
 
         {cargando ? (
           <View style={styles.centro}>

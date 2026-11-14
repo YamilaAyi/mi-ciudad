@@ -3,14 +3,28 @@ import type { Evento } from '../tipos/entities';
 
 const UNA_HORA = 60 * 60 * 1000;
 
-export async function programarAvisoEvento(evento: Evento): Promise<void> {
+export async function programarAvisoEvento(
+  evento: Evento
+): Promise<
+  | 'programado'
+  | 'sin-permisos'
+  | 'menos-de-una-hora'
+  | 'fecha-pasada'
+  | 'fecha-invalida'
+  | 'no-programable'
+  | 'error'
+> {
   try {
-    if (evento.estado !== 'programado') return;
+    if (evento.estado !== 'programado') return 'no-programable';
 
     const inicio = new Date(evento.inicio).getTime();
+
+    if (!Number.isFinite(inicio)) return 'fecha-invalida';
+    if (inicio <= Date.now()) return 'fecha-pasada';
+
     const aviso = inicio - UNA_HORA;
 
-    if (!Number.isFinite(inicio) || aviso <= Date.now()) return;
+    if (aviso <= Date.now()) return 'menos-de-una-hora';
 
     const permisos = await Notifications.getPermissionsAsync();
     let autorizado = permisos.granted;
@@ -20,7 +34,7 @@ export async function programarAvisoEvento(evento: Evento): Promise<void> {
       autorizado = solicitado.granted;
     }
 
-    if (!autorizado) return;
+    if (!autorizado) return 'sin-permisos';
 
     await cancelarAvisoEvento(evento.id);
 
@@ -36,11 +50,13 @@ export async function programarAvisoEvento(evento: Evento): Promise<void> {
         date: new Date(aviso),
       },
     });
+
+    return 'programado';
   } catch (error) {
     console.warn('No se pudo programar el aviso:', error);
+    return 'error';
   }
 }
-
 export async function cancelarAvisoEvento(id: string): Promise<void> {
   try {
     const pendientes =

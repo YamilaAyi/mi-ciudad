@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
@@ -11,45 +11,60 @@ import {
   View,
 } from 'react-native';
 
+import AvisoDatosGuardados from '../components/AvisoDatosGuardados';
 import type { Evento, Lugar } from '../tipos/entities';
 import { obtenerUsuarioActual } from '../servicios/auth';
 import {
   obtenerEventosGuardados,
   quitarEventoGuardado,
+  usandoCacheEventosGuardados,
 } from '../servicios/eventos';
 import { obtenerLugares } from '../servicios/lugares';
 import { sincronizarAvisosEventos, cancelarAvisoEvento } from '../servicios/notificaciones-eventos';
+import {
+  formatearDiaCortoArgentina,
+  formatearNumeroDiaArgentina,
+  formatearMesArgentina,
+  formatearHoraArgentina,
+  finDelDiaArgentina,
+} from '../utilidades/fechas';
+
 
 function obtenerFecha(fecha: string) {
   return new Date(fecha);
 }
 
+// Mantiene el evento vigente hasta el final de su día en Argentina.
+function sigueVigente(evento: Evento, ahora: Date): boolean {
+  const fin = evento.fin
+    ? new Date(evento.fin)
+    : finDelDiaArgentina(evento.inicio);
+
+  if (!fin || Number.isNaN(fin.getTime())) return true;
+  return fin.getTime() >= ahora.getTime();
+}
+
 function nombreDia(fecha: string) {
-  return obtenerFecha(fecha).toLocaleDateString('es-AR', {
-    weekday: 'short',
-  }).replace('.', '');
+  return formatearDiaCortoArgentina(fecha);
 }
 
 function numeroDia(fecha: string) {
-  return obtenerFecha(fecha).toLocaleDateString('es-AR', {
-    day: '2-digit',
-  });
+  return formatearNumeroDiaArgentina(fecha);
 }
 
 function nombreMes(fecha: string) {
-  return obtenerFecha(fecha).toLocaleDateString('es-AR', {
-    month: 'short',
-  }).replace('.', '');
+  return formatearMesArgentina(fecha);
 }
 
 function horaEvento(fecha: string) {
-  return obtenerFecha(fecha).toLocaleTimeString('es-AR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return formatearHoraArgentina(fecha);
 }
 
 function estadoEvento(estado: Evento['estado']) {
+  if (estado === 'cancelado') {
+    return { texto: 'Cancelado', color: '#C94343', fondo: '#FDE8E8' };
+  }
+
   if (estado === 'suspendido') {
     return { texto: 'Suspendido', color: '#B7791F', fondo: '#FFF4D8' };
   }
@@ -84,6 +99,7 @@ export default function MisEventosScreen() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
   const [quitando, setQuitando] = useState<string | null>(null);
+  const [datosGuardados, setDatosGuardados] = useState(false);
 
   const cargarEventos = useCallback(async () => {
     setCargando(true);
@@ -115,15 +131,10 @@ export default function MisEventosScreen() {
       const ahora = new Date();
 
       const proximos = resultado
-        .filter((evento) => {
-          const fechaInicio = obtenerFecha(evento.inicio);
-
-          return (
-            fechaInicio.getTime() >= ahora.getTime() &&
-            (evento.estado === 'programado' ||
-              evento.estado === 'suspendido')
-          );
-        })
+        .filter(
+          (evento) =>
+            sigueVigente(evento, ahora) && evento.estado !== 'finalizado'
+        )
         .sort(
           (a, b) =>
             obtenerFecha(a.inicio).getTime() -
@@ -131,7 +142,15 @@ export default function MisEventosScreen() {
         );
 
       setEventos(proximos);
-      await sincronizarAvisosEventos(resultado);
+
+      const vienenDeCopia = usandoCacheEventosGuardados;
+      setDatosGuardados(vienenDeCopia);
+
+      // Con una copia vieja no se tocan los recordatorios: podrían rearmarse
+      // los de un evento que se canceló mientras no había conexión.
+      if (!vienenDeCopia) {
+        await sincronizarAvisosEventos(resultado);
+      }
 
 
       try {
@@ -216,6 +235,10 @@ export default function MisEventosScreen() {
             </Text>
           </View>
         </View>
+
+        {datosGuardados && !cargando && !error && (
+          <AvisoDatosGuardados onReintentar={() => void cargarEventos()} />
+        )}
 
         {cargando ? (
           <View style={styles.centro}>

@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -23,6 +23,12 @@ import {
 import { obtenerRolSesion, obtenerUsuarioActual } from '../../servicios/auth';
 import { obtenerLugares } from '../../servicios/lugares';
 import { programarAvisoEvento, cancelarAvisoEvento } from '../../servicios/notificaciones-eventos';
+import { registrarDispositivoPush } from '../../servicios/notificaciones-push';
+import {
+  formatearFechaArgentina,
+  formatearHoraArgentina,
+} from '../../utilidades/fechas';
+
 
 const AZUL = '#176B87';
 
@@ -41,19 +47,11 @@ const ETIQUETAS_ESTADO: Record<string, string> = {
 };
 
 function formatearFecha(fecha: string): string {
-  return new Date(fecha).toLocaleDateString('es-AR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
+  return formatearFechaArgentina(fecha);
 }
 
 function formatearHora(fecha: string): string {
-  return new Date(fecha).toLocaleTimeString('es-AR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return formatearHoraArgentina(fecha);
 }
 
 function obtenerDuracion(inicio: string, fin: string | null): string {
@@ -197,10 +195,10 @@ export default function DetalleEventoScreen() {
         return;
       }
 
-      if (!guardado && evento.estado !== 'programado') {
+      if (!guardado && evento.estado !== 'programado' && evento.estado !== 'suspendido') {
         Alert.alert(
           'Evento no disponible',
-          'Solo podés guardar eventos que estén programados.'
+          'Solo podés guardar eventos programados o suspendidos.'
         );
         return;
       }
@@ -214,11 +212,48 @@ export default function DetalleEventoScreen() {
         Alert.alert('Evento quitado', 'El evento se quitó de tus guardados.');
       } else {
         await guardarEvento(evento.id);
-        await programarAvisoEvento(evento);
+        await registrarDispositivoPush();
+
+        let detalleRecordatorio =
+          'El evento quedó guardado, pero al estar suspendido no se programó un recordatorio.';
+
+        if (evento.estado === 'programado') {
+          const resultado = await programarAvisoEvento(evento);
+
+          switch (resultado) {
+            case 'programado':
+              detalleRecordatorio =
+                'Te avisaremos una hora antes de que comience.';
+              break;
+            case 'sin-permisos':
+              detalleRecordatorio =
+                'No pudimos activar el recordatorio porque las notificaciones no están habilitadas. Podés activarlas desde los ajustes de tu dispositivo.';
+              break;
+            case 'menos-de-una-hora':
+              detalleRecordatorio =
+                'El evento comienza en menos de una hora, por lo que no se pudo programar un aviso previo.';
+              break;
+            case 'fecha-pasada':
+              detalleRecordatorio =
+                'El evento ya comenzó o su fecha pasó. No se programó un recordatorio.';
+              break;
+            case 'fecha-invalida':
+              detalleRecordatorio =
+                'No pudimos programar el recordatorio porque la fecha del evento no es válida.';
+              break;
+            default:
+              detalleRecordatorio =
+                'El evento quedó guardado, pero no pudimos programar el recordatorio. Revisá los permisos de notificaciones e intentá nuevamente.';
+              break;
+          }
+        } else {
+          await cancelarAvisoEvento(evento.id);
+        }
+
         setGuardado(true);
         Alert.alert(
           '¡Evento guardado!',
-          'El evento se guardó con éxito. Ya podés encontrarlo en tus eventos guardados.'
+          `El evento se guardó con éxito y ya podés encontrarlo en tus eventos guardados.\n\n${detalleRecordatorio}`
         );
       }
     } catch (e) {
@@ -509,7 +544,7 @@ export default function DetalleEventoScreen() {
           )}
       </ScrollView>
 
-      {evento?.estado === 'programado' && (
+      {(evento?.estado === 'programado' || evento?.estado === 'suspendido') && (
         <View style={styles.pieFijo}>
           <Pressable
             style={({ pressed }) => [
